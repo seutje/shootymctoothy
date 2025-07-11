@@ -128,6 +128,59 @@ const mouseSpeed = 0.002;
 // Create a new vector to store the player's velocity.
 const velocity = new THREE.Vector3();
 
+// Create a new AudioContext for the soundtrack.
+const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+// Variable to store the interval ID for the soundtrack loop.
+let soundtrackInterval;
+
+// The function to play a single note.
+function playNote(frequency, duration) {
+    // Create an oscillator node.
+    const oscillator = audioContext.createOscillator();
+    // Create a gain node for volume control.
+    const gainNode = audioContext.createGain();
+    // Set the frequency of the oscillator.
+    oscillator.frequency.value = frequency;
+    // Set the gain value of the note.
+    gainNode.gain.value = 0.1;
+    // Connect the oscillator to the gain node.
+    oscillator.connect(gainNode);
+    // Connect the gain node to the destination.
+    gainNode.connect(audioContext.destination);
+    // Start the oscillator.
+    oscillator.start();
+    // Stop the oscillator after the given duration.
+    oscillator.stop(audioContext.currentTime + duration);
+}
+
+// The function to start the soundtrack.
+function startSoundtrack() {
+    // Resume the audio context if it is suspended.
+    if (audioContext.state === 'suspended') {
+        // Resume the audio context.
+        audioContext.resume();
+    }
+    // Frequencies for a simple E1M1-inspired riff.
+    const riff = [329.63, 392.0, 415.3, 329.63];
+    // Set the current note index.
+    let index = 0;
+    // Clear any existing interval.
+    clearInterval(soundtrackInterval);
+    // Start a new interval to play the riff.
+    soundtrackInterval = setInterval(() => {
+        // Play the current note.
+        playNote(riff[index], 0.25);
+        // Advance to the next note.
+        index = (index + 1) % riff.length;
+    }, 250);
+}
+
+// The function to stop the soundtrack.
+function stopSoundtrack() {
+    // Clear the interval to stop the riff.
+    clearInterval(soundtrackInterval);
+}
+
 // Add an event listener for mouse movement to control the camera.
 document.addEventListener('mousemove', onMouseMove, false);
 // Add an event listener for mouse clicks to fire projectiles.
@@ -411,6 +464,8 @@ function animate(currentTime) {
 
                 // Stop the animation loop.
                 gamePaused = true;
+                // Stop the soundtrack when the game ends.
+                stopSoundtrack();
                 // Release the mouse pointer.
                 document.exitPointerLock();
 
@@ -491,6 +546,8 @@ startButton.addEventListener('click', () => {
     startScreen.style.display = 'none';
     // Unpause the game.
     gamePaused = false;
+    // Start the soundtrack.
+    startSoundtrack();
     // Request pointer lock.
     document.body.requestPointerLock();
 
