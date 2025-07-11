@@ -49,6 +49,8 @@ yawObject.add(camera);
 
 // Create an array to store obstacle objects.
 const obstacles = [];
+// Create a buffer distance used when spawning enemies.
+const obstacleSpawnBuffer = 1;
 // Function to create an obstacle at a given position.
 function createObstacle(x, z) {
     // Create a box geometry for the obstacle.
@@ -558,7 +560,7 @@ function findEnemySpawnPosition() {
         // Increment the attempt counter.
         attempts++;
         // Skip this position if it collides with any obstacle.
-        if (collidesWithObstacles(position, 1)) {
+        if (collidesWithObstacles(position, 1 + obstacleSpawnBuffer)) {
             // Continue to the next attempt.
             continue;
         }
