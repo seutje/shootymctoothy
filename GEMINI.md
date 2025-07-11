@@ -24,3 +24,4 @@ The project follows a simple, no-build-step structure:
 ## Coding Style
 
 -   **JavaScript Commenting**: Every single line of JavaScript code must have a corresponding comment explaining its purpose. HTML and CSS files should not be commented.
+-   **Newline at End of File**: All files must end with a single newline character.
