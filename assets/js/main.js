@@ -147,6 +147,8 @@ const uiContext = uiCanvas.getContext('2d');
 let lastFrameTime = 0;
 let frameCount = 0;
 let fps = 0;
+// Variable to store the last time the UI was updated.
+let lastUIUpdate = -1000;
 
 // Variable to track if the game is paused.
 let gamePaused = false;
@@ -512,8 +514,13 @@ function animate(currentTime) {
     if (gamePaused) {
         // Render the scene without updates.
         renderer.render(scene, camera);
-        // Draw the UI overlay.
-        drawUI();
+        // Check if one second has passed since the last UI update.
+        if (currentTime - lastUIUpdate >= 1000) {
+            // Record the time of this UI update.
+            lastUIUpdate = currentTime;
+            // Draw the UI overlay.
+            drawUI();
+        }
         // Exit early to skip game logic.
         return;
     }
@@ -713,8 +720,13 @@ function animate(currentTime) {
 
     // Render the scene from the camera's perspective.
     renderer.render(scene, camera);
-    // Draw the UI overlay after rendering.
-    drawUI();
+    // Update the UI only once per second.
+    if (currentTime - lastUIUpdate >= 1000) {
+        // Record the time of this UI update.
+        lastUIUpdate = currentTime;
+        // Draw the UI overlay.
+        drawUI();
+    }
 }
 
 // Start the animation loop.
