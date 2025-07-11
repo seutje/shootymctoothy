@@ -54,6 +54,50 @@ const projectiles = [];
 // Create an array to store enemy projectile objects.
 const enemyProjectiles = [];
 
+// Array to store high scores.
+let highScores = [];
+// Maximum number of high scores to keep.
+const MAX_HIGH_SCORES = 5;
+// Default player name for high scores.
+const DEFAULT_PLAYER_NAME = "ShootyMcToothy";
+
+// Function to load high scores from local storage.
+function loadHighScores() {
+    // Get high scores from local storage.
+    const storedScores = localStorage.getItem('highScores');
+    // Parse the stored scores or return an empty array if none.
+    let parsedScores = storedScores ? JSON.parse(storedScores) : [];
+    // Filter out any invalid entries and ensure score is a number.
+    highScores = parsedScores.filter(entry =>
+        typeof entry === 'object' && entry !== null &&
+        typeof entry.name === 'string' &&
+        typeof entry.score === 'number'
+    );
+}
+
+// Function to save high scores to local storage.
+function saveHighScores() {
+    // Save high scores to local storage.
+    localStorage.setItem('highScores', JSON.stringify(highScores));
+}
+
+// Function to display high scores.
+function displayHighScores() {
+    // Get the high scores list element.
+    const highScoresList = document.getElementById('highScoresList');
+    // Clear the current list.
+    highScoresList.innerHTML = '';
+    // Iterate over high scores and create list items.
+    highScores.forEach(scoreEntry => {
+        // Create a new list item.
+        const listItem = document.createElement('li');
+        // Set the text content of the list item.
+        listItem.textContent = `${scoreEntry.name}: ${scoreEntry.score}`;
+        // Append the list item to the list.
+        highScoresList.appendChild(listItem);
+    });
+}
+
 // Initialize the score.
 let score = 0;
 // Get the score element.
@@ -331,6 +375,19 @@ function animate() {
                 // Update the final score display.
                 finalScoreElement.textContent = 'Final Score: ' + score;
 
+                // Check if the current score is a high score.
+                const playerName = prompt('Enter your name:', DEFAULT_PLAYER_NAME) || DEFAULT_PLAYER_NAME;
+                // Add the new score to the high scores array.
+                highScores.push({ name: playerName, score: score });
+                // Sort high scores in descending order.
+                highScores.sort((a, b) => b.score - a.score);
+                // Keep only the top 5 scores.
+                highScores = highScores.slice(0, MAX_HIGH_SCORES);
+                // Save high scores to local storage.
+                saveHighScores();
+                // Display high scores.
+                displayHighScores();
+
                 // Stop the animation loop.
                 gamePaused = true;
                 // Release the mouse pointer.
@@ -395,3 +452,6 @@ function animate() {
 
 // Start the animation loop.
 animate();
+
+// Load high scores when the script starts.
+loadHighScores();

@@ -43,3 +43,14 @@ body {
     font-size: 1.2em;
     cursor: pointer;
 }
+
+#highScoresList {
+    list-style: none;
+    padding: 0;
+    margin-top: 10px;
+}
+
+#highScoresList li {
+    padding: 5px 0;
+    border-bottom: 1px solid #ccc;
+}
