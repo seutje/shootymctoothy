@@ -24,10 +24,29 @@ directionalLight.position.set(1, 1, 1);
 // Add the directional light to the scene.
 scene.add(directionalLight);
 
-// Create a large green plane for the ground.
+// Create a plane geometry for the ground.
 const groundGeometry = new THREE.PlaneGeometry(500, 500);
-// Create a green material for the ground.
-const groundMaterial = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
+// Create a texture object to hold the ground image.
+const groundTexture = new THREE.Texture();
+// Create an image element for the ground texture.
+const groundImage = new Image();
+// Update the texture settings once the image loads.
+groundImage.onload = function () {
+    // Assign the loaded image to the texture.
+    groundTexture.image = groundImage;
+    // Inform Three.js that the texture needs an update.
+    groundTexture.needsUpdate = true;
+    // Set the texture to repeat horizontally.
+    groundTexture.wrapS = THREE.RepeatWrapping;
+    // Set the texture to repeat vertically.
+    groundTexture.wrapT = THREE.RepeatWrapping;
+    // Set how many times the texture repeats.
+    groundTexture.repeat.set(50, 50);
+};
+// Start loading the ground texture from the assets folder.
+groundImage.src = 'assets/images/texture-ground.png';
+// Create a material for the ground using the texture.
+const groundMaterial = new THREE.MeshStandardMaterial({ map: groundTexture });
 // Create a mesh from the ground geometry and material.
 const ground = new THREE.Mesh(groundGeometry, groundMaterial);
 // Rotate the ground to be horizontal.
