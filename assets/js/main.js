@@ -487,6 +487,26 @@ function onKeyDown(event) {
             isGrounded = false;
         }
     }
+    // Check if the "p" key was pressed.
+    if (event.key.toLowerCase() === 'p') {
+        // Ensure the game is in progress before toggling pause.
+        if (gameStarted && !gameOver) {
+            // Toggle the paused state.
+            gamePaused = !gamePaused;
+            // Stop the soundtrack when pausing.
+            if (gamePaused) {
+                // Stop the soundtrack loop.
+                stopSoundtrack();
+                // Release pointer lock so the mouse can move freely.
+                document.exitPointerLock();
+            } else {
+                // Restart the soundtrack when resuming.
+                startSoundtrack();
+                // Request pointer lock to regain mouse control.
+                document.body.requestPointerLock();
+            }
+        }
+    }
 }
 
 // The function to handle keyup events.
@@ -988,6 +1008,23 @@ function drawUI() {
     uiContext.fillText('Health: ' + health, 10, 60);
     // Draw the FPS text.
     uiContext.fillText('FPS: ' + fps, uiCanvas.width - 100, 30);
+    // Check if the game is paused during play.
+    if (gamePaused && gameStarted && !gameOver) {
+        // Set a translucent background color.
+        uiContext.fillStyle = 'rgba(0,0,0,0.5)';
+        // Draw the background rectangle.
+        uiContext.fillRect(uiCanvas.width / 2 - 100, uiCanvas.height / 2 - 50, 200, 100);
+        // Set the text color for the pause message.
+        uiContext.fillStyle = 'white';
+        // Set the large font for the pause header.
+        uiContext.font = '30px sans-serif';
+        // Draw the pause header.
+        uiContext.fillText('Paused', uiCanvas.width / 2 - 50, uiCanvas.height / 2 - 10);
+        // Set the font for the resume prompt.
+        uiContext.font = '20px sans-serif';
+        // Draw the resume prompt.
+        uiContext.fillText('Press P to resume', uiCanvas.width / 2 - 90, uiCanvas.height / 2 + 30);
+    }
     // Check if the game has not started.
     if (!gameStarted && !gameOver) {
         // Set a translucent background color.
