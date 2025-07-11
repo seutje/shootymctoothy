@@ -56,8 +56,6 @@ const mouseSpeed = 0.002;
 
 // Create a new vector to store the player's velocity.
 const velocity = new THREE.Vector3();
-// Create a new vector to store the player's direction.
-const direction = new THREE.Vector3();
 
 // Add an event listener for mouse movement to control the camera.
 document.addEventListener('mousemove', onMouseMove, false);
@@ -76,13 +74,13 @@ const keys = {};
 // The function to handle keydown events.
 function onKeyDown(event) {
     // Set the key state to true.
-    keys[event.key] = true;
+    keys[event.key.toLowerCase()] = true;
 }
 
 // The function to handle keyup events.
 function onKeyUp(event) {
     // Set the key state to false.
-    keys[event.key] = false;
+    keys[event.key.toLowerCase()] = false;
 }
 
 // The function to handle mouse movement.
@@ -172,32 +170,41 @@ function animate() {
     // Request the next animation frame.
     requestAnimationFrame(animate);
 
-    // Reset the player's velocity.
-    velocity.x = 0;
-    // Reset the player's velocity.
-    velocity.z = 0;
+    // Stop any previous movement.
+    velocity.set(0, 0, 0);
 
-    // Get the player's forward direction.
-    direction.z = Number(keys['w'] || keys['W']) - Number(keys['s'] || keys['S']);
-    // Get the player's sideways direction.
-    direction.x = Number(keys['a'] || keys['A']) - Number(keys['d'] || keys['D']);
-    // Normalize the direction vector.
-    direction.normalize();
-
-    // Check if the player is moving forward or backward.
-    if (keys['w'] || keys['s']) {
-        // Set the player's velocity based on the direction and move speed.
-        velocity.z = direction.z * moveSpeed;
+    // Get the player's forward/backward movement.
+    if (keys['w']) {
+        // Move forward.
+        velocity.z -= 1;
     }
-    // Check if the player is moving left or right.
-    if (keys['a'] || keys['d']) {
-        // Set the player's velocity based on the direction and move speed.
-        velocity.x = direction.x * moveSpeed;
+    // Get the player's forward/backward movement.
+    if (keys['s']) {
+        // Move backward.
+        velocity.z += 1;
+    }
+    // Get the player's sideways movement.
+    if (keys['a']) {
+        // Move left.
+        velocity.x -= 1;
+    }
+    // Get the player's sideways movement.
+    if (keys['d']) {
+        // Move right.
+        velocity.x += 1;
     }
 
-    // Move the player forward/backward based on the yaw object's direction.
+    // Normalize the velocity vector to ensure consistent speed.
+    if (velocity.length() > 0) {
+        // Normalize the velocity.
+        velocity.normalize();
+        // Apply the movement speed.
+        velocity.multiplyScalar(moveSpeed);
+    }
+
+    // Apply the velocity to the yaw object.
     yawObject.translateX(velocity.x);
-    // Move the player forward/backward based on the yaw object's direction.
+    // Apply the velocity to the yaw object.
     yawObject.translateZ(velocity.z);
 
     // Update the position of each projectile.
