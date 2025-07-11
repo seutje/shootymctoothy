@@ -1071,27 +1071,31 @@ function drawUI() {
     if (gameOver) {
         // Set a translucent background color.
         uiContext.fillStyle = 'rgba(0,0,0,0.8)';
-        // Draw the background rectangle.
-        uiContext.fillRect(uiCanvas.width / 2 - 150, uiCanvas.height / 2 - 150, 300, 300);
+        // Draw the background rectangle with extra height.
+        uiContext.fillRect(uiCanvas.width / 2 - 150, uiCanvas.height / 2 - 200, 300, 400);
         // Set the text color for the game over text.
         uiContext.fillStyle = 'white';
+        // Center the text horizontally.
+        uiContext.textAlign = 'center';
         // Set the large font for the header.
         uiContext.font = '30px sans-serif';
         // Draw the game over header.
-        uiContext.fillText('Game Over!', uiCanvas.width / 2 - 95, uiCanvas.height / 2 - 60);
+        uiContext.fillText('Game Over!', uiCanvas.width / 2, uiCanvas.height / 2 - 60);
         // Set the font for the score.
         uiContext.font = '20px sans-serif';
         // Draw the final score text.
-        uiContext.fillText('Final Score: ' + score, uiCanvas.width / 2 - 80, uiCanvas.height / 2 - 20);
+        uiContext.fillText('Final Score: ' + score, uiCanvas.width / 2, uiCanvas.height / 2 - 20);
         // Get the list of high scores.
         const scores = displayHighScores();
         // Iterate over each high score.
         for (let i = 0; i < scores.length; i++) {
             // Draw the current high score line.
-            uiContext.fillText(scores[i], uiCanvas.width / 2 - 80, uiCanvas.height / 2 + 20 + i * 20);
+            uiContext.fillText(scores[i], uiCanvas.width / 2, uiCanvas.height / 2 + 20 + i * 20);
         }
         // Draw the restart prompt.
-        uiContext.fillText('Click to restart', uiCanvas.width / 2 - 80, uiCanvas.height / 2 + 20 + scores.length * 20 + 20);
+        uiContext.fillText('Click to restart', uiCanvas.width / 2, uiCanvas.height / 2 + 20 + scores.length * 20 + 20);
+        // Reset text alignment to default.
+        uiContext.textAlign = 'left';
     }
     // Inform Three.js that the texture has changed.
     uiTexture.needsUpdate = true;
