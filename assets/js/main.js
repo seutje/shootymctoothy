@@ -1,7 +1,28 @@
 // Create a new Three.js scene.
 const scene = new THREE.Scene();
-// Set the background color of the scene to blue.
+// Set a blue color as the fallback background.
 scene.background = new THREE.Color(0x87ceeb);
+// Create a texture object that will hold the sky texture.
+const skyTexture = new THREE.Texture();
+// Create an image element to load the sky texture.
+const skyImage = new Image();
+// Set up a handler to update the texture once the image loads.
+skyImage.onload = function () {
+    // Assign the loaded image to the texture.
+    skyTexture.image = skyImage;
+    // Inform Three.js that the texture needs an update.
+    skyTexture.needsUpdate = true;
+};
+// Start loading the sky texture from the assets folder.
+skyImage.src = 'assets/images/texture-sky.png';
+// Create a box geometry large enough to surround the scene.
+const skyGeometry = new THREE.BoxGeometry(1000, 1000, 1000);
+// Create a material for the skybox using the loaded texture.
+const skyMaterial = new THREE.MeshBasicMaterial({ map: skyTexture, side: THREE.BackSide });
+// Create a mesh from the sky geometry and material.
+const skyBox = new THREE.Mesh(skyGeometry, skyMaterial);
+// Add the skybox to the scene.
+scene.add(skyBox);
 
 // Create a new perspective camera.
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
