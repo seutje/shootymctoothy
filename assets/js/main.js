@@ -244,19 +244,36 @@ function animate() {
     }
 
     // Update the position of each enemy.
-    for (const enemy of enemies) {
+    for (let i = 0; i < enemies.length; i++) {
+        // Get the current enemy.
+        const enemy1 = enemies[i];
         // Update the enemy's position based on its velocity.
-        enemy.position.add(enemy.velocity);
+        enemy1.position.add(enemy1.velocity);
 
         // Check if the enemy has hit the edge of the play area.
-        if (enemy.position.x < -250 || enemy.position.x > 250) {
+        if (enemy1.position.x < -250 || enemy1.position.x > 250) {
             // Reverse the enemy's x velocity.
-            enemy.velocity.x *= -1;
+            enemy1.velocity.x *= -1;
         }
         // Check if the enemy has hit the edge of the play area.
-        if (enemy.position.z < -250 || enemy.position.z > 250) {
+        if (enemy1.position.z < -250 || enemy1.position.z > 250) {
             // Reverse the enemy's z velocity.
-            enemy.velocity.z *= -1;
+            enemy1.velocity.z *= -1;
+        }
+
+        // Check for collisions with other enemies.
+        for (let j = i + 1; j < enemies.length; j++) {
+            // Get the other enemy.
+            const enemy2 = enemies[j];
+            // Check if the enemies are colliding.
+            if (enemy1.position.distanceTo(enemy2.position) < 2) {
+                // Swap the velocities of the two enemies.
+                const tempVelocity = enemy1.velocity.clone();
+                // Set the first enemy's velocity to the second enemy's velocity.
+                enemy1.velocity.copy(enemy2.velocity);
+                // Set the second enemy's velocity to the first enemy's original velocity.
+                enemy2.velocity.copy(tempVelocity);
+            }
         }
     }
 
