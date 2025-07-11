@@ -1,0 +1,11 @@
+{
+  "name": "shootymctoothy",
+  "version": "1.0.0",
+  "description": "ShootyMcToothy browser-based 3D shooter game",
+  "scripts": {
+    "test": "jest"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}
