@@ -47,6 +47,20 @@ scene.add(yawObject);
 // Add the camera to the yaw object.
 yawObject.add(camera);
 
+// Create a texture object that will hold the obstacle texture.
+const obstacleTexture = new THREE.Texture();
+// Create an image element to load the obstacle texture.
+const obstacleImage = new Image();
+// Set up a handler to update the texture once the image loads.
+obstacleImage.onload = function () {
+    // Assign the loaded image to the texture.
+    obstacleTexture.image = obstacleImage;
+    // Inform Three.js that the texture needs an update.
+    obstacleTexture.needsUpdate = true;
+};
+// Start loading the obstacle texture from the assets folder.
+obstacleImage.src = 'assets/images/texture-obstacle.png';
+
 // Create an array to store obstacle objects.
 const obstacles = [];
 // Create a buffer distance used when spawning enemies.
@@ -55,8 +69,8 @@ const obstacleSpawnBuffer = 1;
 function createObstacle(x, z) {
     // Create a box geometry for the obstacle.
     const obstacleGeometry = new THREE.BoxGeometry(5, 5, 5);
-    // Create a gray material for the obstacle.
-    const obstacleMaterial = new THREE.MeshStandardMaterial({ color: 0x808080 });
+    // Create a material for the obstacle using the loaded texture.
+    const obstacleMaterial = new THREE.MeshBasicMaterial({ map: obstacleTexture });
     // Create a mesh from the obstacle geometry and material.
     const obstacle = new THREE.Mesh(obstacleGeometry, obstacleMaterial);
     // Set the obstacle position.
