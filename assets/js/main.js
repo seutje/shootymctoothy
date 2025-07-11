@@ -97,8 +97,19 @@ const projectiles = [];
 // Create an array to store enemy projectile objects.
 const enemyProjectiles = [];
 
-// Load the enemy texture from the assets folder.
-const enemyTexture = new THREE.TextureLoader().load('assets/images/texture-enemy.png');
+// Create a texture object that will hold the enemy texture.
+const enemyTexture = new THREE.Texture();
+// Create an image element to load the enemy texture.
+const enemyImage = new Image();
+// Set up a handler to update the texture once the image loads.
+enemyImage.onload = function () {
+    // Assign the loaded image to the texture.
+    enemyTexture.image = enemyImage;
+    // Inform Three.js that the texture needs an update.
+    enemyTexture.needsUpdate = true;
+};
+// Start loading the enemy texture from the assets folder.
+enemyImage.src = 'assets/images/texture-enemy.png';
 
 // Array to store high scores.
 let highScores = [];
