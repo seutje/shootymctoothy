@@ -11,6 +11,18 @@ const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 // Append the renderer to the document body.
 document.body.appendChild(renderer.domElement);
+// Create a CSS2D renderer for HTML overlays.
+const labelRenderer = new THREE.CSS2DRenderer();
+// Set the size of the CSS2D renderer.
+labelRenderer.setSize(window.innerWidth, window.innerHeight);
+// Position the CSS2D renderer absolutely on the page.
+labelRenderer.domElement.style.position = 'absolute';
+// Align the CSS2D renderer to the top of the page.
+labelRenderer.domElement.style.top = '0px';
+// Enable pointer events so buttons can be clicked.
+labelRenderer.domElement.style.pointerEvents = 'auto';
+// Append the CSS2D renderer to the document body.
+document.body.appendChild(labelRenderer.domElement);
 
 // Create a blue ambient light with an intensity of 0.5.
 const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
@@ -152,6 +164,24 @@ let health = 100;
 const healthElement = document.getElementById('health');
 // Get the FPS counter element.
 const fpsCounter = document.getElementById('fpsCounter');
+// Create a CSS2D object for the score display.
+const scoreLabel = new THREE.CSS2DObject(scoreElement);
+// Attach the score label to the camera so it follows the view.
+camera.add(scoreLabel);
+// Position the score label near the top left of the view.
+scoreLabel.position.set(-1, 1, -2);
+// Create a CSS2D object for the health display.
+const healthLabel = new THREE.CSS2DObject(healthElement);
+// Attach the health label to the camera.
+camera.add(healthLabel);
+// Position the health label slightly below the score label.
+healthLabel.position.set(-1, 0.7, -2);
+// Create a CSS2D object for the FPS counter.
+const fpsLabel = new THREE.CSS2DObject(fpsCounter);
+// Attach the FPS label to the camera.
+camera.add(fpsLabel);
+// Position the FPS label near the top right of the view.
+fpsLabel.position.set(1, 1, -2);
 
 // Variables for FPS calculation.
 let lastFrameTime = 0;
@@ -387,6 +417,8 @@ function onWindowResize() {
     camera.updateProjectionMatrix();
     // Set the size of the renderer to the new window size.
     renderer.setSize(window.innerWidth, window.innerHeight);
+    // Update the CSS2D renderer size.
+    labelRenderer.setSize(window.innerWidth, window.innerHeight);
 }
 
 // The function to create a projectile.
@@ -613,12 +645,6 @@ function animate(currentTime) {
             // Check if player is dead.
             if (health <= 0) {
                 // Get the game over screen element.
-                const gameOverScreen = document.getElementById('gameOverScreen');
-                // Get the final score element.
-                const finalScoreElement = document.getElementById('finalScore');
-                // Get the restart button element.
-                const restartButton = document.getElementById('restartButton');
-
                 // Display the game over screen.
                 gameOverScreen.style.display = 'block';
                 // Update the final score display.
@@ -716,6 +742,8 @@ function animate(currentTime) {
 
     // Render the scene from the camera's perspective.
     renderer.render(scene, camera);
+    // Render the CSS2D scene for HTML elements.
+    labelRenderer.render(scene, camera);
 }
 
 // Start the animation loop.
@@ -728,6 +756,24 @@ loadHighScores();
 const startScreen = document.getElementById('startScreen');
 // Get the start button element.
 const startButton = document.getElementById('startButton');
+// Get the game over screen element.
+const gameOverScreen = document.getElementById('gameOverScreen');
+// Get the final score element.
+const finalScoreElement = document.getElementById('finalScore');
+// Get the restart button element.
+const restartButton = document.getElementById('restartButton');
+// Create a CSS2D object for the start screen.
+const startLabel = new THREE.CSS2DObject(startScreen);
+// Attach the start screen to the camera.
+camera.add(startLabel);
+// Position the start screen in front of the camera.
+startLabel.position.set(0, 0, -2);
+// Create a CSS2D object for the game over screen.
+const gameOverLabel = new THREE.CSS2DObject(gameOverScreen);
+// Attach the game over screen to the camera.
+camera.add(gameOverLabel);
+// Position the game over screen in front of the camera.
+gameOverLabel.position.set(0, 0, -2);
 
 // Initially pause the game.
 gamePaused = true;
