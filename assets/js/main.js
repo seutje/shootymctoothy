@@ -156,7 +156,7 @@ const DEFAULT_PLAYER_NAME = "ShootyMcToothy";
 // Function to load high scores from local storage.
 function loadHighScores() {
     // Get high scores from local storage.
-    const storedScores = localStorage.getItem('highScores');
+    const storedScores = localStorage.getItem('shootyHighScores');
     // Parse the stored scores or return an empty array if none.
     let parsedScores = storedScores ? JSON.parse(storedScores) : [];
     // Filter out any invalid entries and ensure score is a number.
@@ -170,7 +170,7 @@ function loadHighScores() {
 // Function to save high scores to local storage.
 function saveHighScores() {
     // Save high scores to local storage.
-    localStorage.setItem('highScores', JSON.stringify(highScores));
+    localStorage.setItem('shootyHighScores', JSON.stringify(highScores));
 }
 
 // Function to display high scores.
