@@ -153,6 +153,15 @@ function createEnemy() {
     enemy.position.z = (Math.random() - 0.5) * 50;
     // Set the enemy's y position.
     enemy.position.y = 1;
+    // Create a random velocity for the enemy.
+    enemy.velocity = new THREE.Vector3(
+        // Set a random x velocity.
+        (Math.random() - 0.5) * 0.1,
+        // Set the y velocity to 0.
+        0,
+        // Set a random z velocity.
+        (Math.random() - 0.5) * 0.1
+    );
     // Add the enemy to the scene.
     scene.add(enemy);
     // Add the enemy to the enemies array.
@@ -231,6 +240,23 @@ function animate() {
                 // Break the inner loop since the projectile is gone.
                 break;
             }
+        }
+    }
+
+    // Update the position of each enemy.
+    for (const enemy of enemies) {
+        // Update the enemy's position based on its velocity.
+        enemy.position.add(enemy.velocity);
+
+        // Check if the enemy has hit the edge of the play area.
+        if (enemy.position.x < -250 || enemy.position.x > 250) {
+            // Reverse the enemy's x velocity.
+            enemy.velocity.x *= -1;
+        }
+        // Check if the enemy has hit the edge of the play area.
+        if (enemy.position.z < -250 || enemy.position.z > 250) {
+            // Reverse the enemy's z velocity.
+            enemy.velocity.z *= -1;
         }
     }
 
