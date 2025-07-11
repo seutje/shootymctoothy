@@ -374,7 +374,7 @@ function playShootSound() {
     // Set the starting gain so the sound is audible.
     gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
     // Fade the gain quickly to create a short pulse.
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
     // Connect the oscillator to the gain node.
     oscillator.connect(gainNode);
     // Connect the gain node to the reverb effect.
