@@ -370,6 +370,11 @@ function onMouseMove(event) {
 
 // The function to handle mouse down events.
 function onMouseDown(event) {
+    // Do nothing if the game is paused.
+    if (gamePaused) {
+        // Exit early to allow UI clicks.
+        return;
+    }
     // Lock the pointer to the document body.
     document.body.requestPointerLock();
     // Check if the left mouse button was clicked.
