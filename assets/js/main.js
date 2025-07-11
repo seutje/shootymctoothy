@@ -780,7 +780,7 @@ function drawUI() {
         // Set a translucent background color.
         uiContext.fillStyle = 'rgba(0,0,0,0.8)';
         // Draw the background rectangle.
-        uiContext.fillRect(uiCanvas.width / 2 - 150, uiCanvas.height / 2 - 100, 300, 200);
+        uiContext.fillRect(uiCanvas.width / 2 - 150, uiCanvas.height / 2 - 150, 300, 300);
         // Set the text color for the game over text.
         uiContext.fillStyle = 'white';
         // Set the large font for the header.
