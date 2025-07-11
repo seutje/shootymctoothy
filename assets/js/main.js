@@ -624,16 +624,21 @@ function animate(currentTime) {
                 // Update the final score display.
                 finalScoreElement.textContent = 'Final Score: ' + score;
 
-                // Check if the current score is a high score.
-                const playerName = prompt('Enter your name:', DEFAULT_PLAYER_NAME) || DEFAULT_PLAYER_NAME;
-                // Add the new score to the high scores array.
-                highScores.push({ name: playerName, score: score });
-                // Sort high scores in descending order.
-                highScores.sort((a, b) => b.score - a.score);
-                // Keep only the top 5 scores.
-                highScores = highScores.slice(0, MAX_HIGH_SCORES);
-                // Save high scores to local storage.
-                saveHighScores();
+                // Determine if the current score qualifies for the high score list.
+                const qualifies = highScores.length < MAX_HIGH_SCORES || score > Math.min(...highScores.map(entry => entry.score));
+                // Check if the score qualifies for the top five.
+                if (qualifies) {
+                    // Prompt the player for their name or use a default value.
+                    const playerName = prompt('Enter your name:', DEFAULT_PLAYER_NAME) || DEFAULT_PLAYER_NAME;
+                    // Add the new score to the high scores array.
+                    highScores.push({ name: playerName, score: score });
+                    // Sort high scores in descending order.
+                    highScores.sort((a, b) => b.score - a.score);
+                    // Keep only the top 5 scores.
+                    highScores = highScores.slice(0, MAX_HIGH_SCORES);
+                    // Save high scores to local storage.
+                    saveHighScores();
+                }
                 // Display high scores.
                 displayHighScores();
 
