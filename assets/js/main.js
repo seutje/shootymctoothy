@@ -97,6 +97,9 @@ const projectiles = [];
 // Create an array to store enemy projectile objects.
 const enemyProjectiles = [];
 
+// Load the enemy texture from the assets folder.
+const enemyTexture = new THREE.TextureLoader().load('assets/images/texture-enemy.png');
+
 // Array to store high scores.
 let highScores = [];
 // Maximum number of high scores to keep.
@@ -547,8 +550,8 @@ function createEnemyProjectile(enemy) {
 function createEnemy() {
     // Create a box geometry for the enemy.
     const enemyGeometry = new THREE.BoxGeometry(2, 2, 2);
-    // Create a red material for the enemy.
-    const enemyMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+    // Create a material for the enemy using the loaded texture.
+    const enemyMaterial = new THREE.MeshBasicMaterial({ map: enemyTexture });
     // Create a mesh from the enemy geometry and material.
     const enemy = new THREE.Mesh(enemyGeometry, enemyMaterial);
     // Set the enemy's x position to a random value.
