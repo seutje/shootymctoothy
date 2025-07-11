@@ -288,8 +288,8 @@ function playShootSound() {
     filter.frequency.value = 800;
     // Create a gain node to form the volume envelope.
     const gainNode = audioContext.createGain();
-    // Set the initial gain value higher so the shot stands out.
-    gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
+    // Set the initial gain value to 0.8 so the shot stands out more.
+    gainNode.gain.setValueAtTime(0.8, audioContext.currentTime);
     // Fade the gain out over a longer period than the hi-hat.
     gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
     // Connect the noise source to the filter.
