@@ -51,11 +51,23 @@ yawObject.add(camera);
 const enemies = [];
 // Create an array to store projectile objects.
 const projectiles = [];
+// Create an array to store enemy projectile objects.
+const enemyProjectiles = [];
 
 // Initialize the score.
 let score = 0;
 // Get the score element.
 const scoreElement = document.getElementById('score');
+
+// Initialize player health.
+let health = 100;
+// Get the health element.
+const healthElement = document.getElementById('health');
+
+// Variable to track if the game is paused.
+let gamePaused = false;
+// Variable to store the animation frame ID.
+let animationFrameId;
 
 // Define the player's movement speed.
 const moveSpeed = 0.1;
@@ -147,6 +159,30 @@ function createProjectile() {
     projectiles.push(projectile);
 }
 
+// The function to create an enemy projectile.
+function createEnemyProjectile(enemy) {
+    // Create a small box geometry for the enemy projectile.
+    const projectileGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
+    // Create a red material for the enemy projectile.
+    const projectileMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+    // Create a mesh from the projectile geometry and material.
+    const projectile = new THREE.Mesh(projectileGeometry, projectileMaterial);
+    // Set the projectile's initial position to the enemy's position.
+    projectile.position.copy(enemy.position);
+    // Get the direction from the enemy to the player.
+    const directionToPlayer = new THREE.Vector3();
+    // Subtract the enemy position from the player position.
+    directionToPlayer.subVectors(yawObject.position, enemy.position);
+    // Normalize the direction vector.
+    directionToPlayer.normalize();
+    // Set the projectile's velocity.
+    projectile.velocity = directionToPlayer.multiplyScalar(0.5);
+    // Add the projectile to the scene.
+    scene.add(projectile);
+    // Add the projectile to the enemy projectiles array.
+    enemyProjectiles.push(projectile);
+}
+
 // The function to create an enemy.
 function createEnemy() {
     // Create a box geometry for the enemy.
@@ -161,6 +197,10 @@ function createEnemy() {
     enemy.position.z = (Math.random() - 0.5) * 50;
     // Set the enemy's y position.
     enemy.position.y = 1;
+    // Set the last shot time for the enemy.
+    enemy.lastShotTime = Date.now();
+    // Set the shot interval for the enemy (randomized).
+    enemy.shotInterval = Math.random() * 2000 + 1000; // 1 to 3 seconds
     // Create a random velocity for the enemy.
     enemy.velocity = new THREE.Vector3(
         // Set a random x velocity.
@@ -185,7 +225,12 @@ for (let i = 0; i < 10; i++) {
 // The main animation loop.
 function animate() {
     // Request the next animation frame.
-    requestAnimationFrame(animate);
+    animationFrameId = requestAnimationFrame(animate);
+
+    // If the game is paused, do not update game logic.
+    if (gamePaused) {
+        return;
+    }
 
     // Stop any previous movement.
     velocity.set(0, 0, 0);
@@ -255,6 +300,51 @@ function animate() {
         }
     }
 
+    // Update the position of each enemy projectile.
+    for (let i = enemyProjectiles.length - 1; i >= 0; i--) {
+        // Get the current enemy projectile.
+        const projectile = enemyProjectiles[i];
+        // Update the projectile's position based on its velocity.
+        projectile.position.add(projectile.velocity);
+
+        // Check for collision with the player.
+        if (projectile.position.distanceTo(yawObject.position) < 1) {
+            // Remove the projectile from the scene.
+            scene.remove(projectile);
+            // Remove the projectile from the array.
+            enemyProjectiles.splice(i, 1);
+            // Decrease player health.
+            health -= 10;
+            // Update health display.
+            healthElement.textContent = 'Health: ' + health;
+            // Check if player is dead.
+            if (health <= 0) {
+                // Get the game over screen element.
+                const gameOverScreen = document.getElementById('gameOverScreen');
+                // Get the final score element.
+                const finalScoreElement = document.getElementById('finalScore');
+                // Get the restart button element.
+                const restartButton = document.getElementById('restartButton');
+
+                // Display the game over screen.
+                gameOverScreen.style.display = 'block';
+                // Update the final score display.
+                finalScoreElement.textContent = 'Final Score: ' + score;
+
+                // Stop the animation loop.
+                gamePaused = true;
+                // Release the mouse pointer.
+                document.exitPointerLock();
+
+                // Add event listener for restart button.
+                restartButton.addEventListener('click', () => {
+                    // Reload the page to restart the game.
+                    location.reload();
+                });
+            }
+        }
+    }
+
     // Update the position of each enemy.
     for (let i = 0; i < enemies.length; i++) {
         // Get the current enemy.
@@ -286,6 +376,16 @@ function animate() {
                 // Set the second enemy's velocity to the first enemy's original velocity.
                 enemy2.velocity.copy(tempVelocity);
             }
+        }
+
+        // Make enemies shoot at the player periodically.
+        if (Date.now() - enemy1.lastShotTime > enemy1.shotInterval) {
+            // Create an enemy projectile.
+            createEnemyProjectile(enemy1);
+            // Update the last shot time.
+            enemy1.lastShotTime = Date.now();
+            // Update the shot interval.
+            enemy1.shotInterval = Math.random() * 2000 + 1000; // 1 to 3 seconds
         }
     }
 

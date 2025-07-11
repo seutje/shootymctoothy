@@ -11,3 +11,35 @@ body {
     font-family: sans-serif;
     font-size: 2em;
 }
+
+#health {
+    position: absolute;
+    top: 50px;
+    left: 10px;
+    color: black;
+    font-family: sans-serif;
+    font-size: 2em;
+}
+
+#gameOverScreen {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+    font-family: sans-serif;
+}
+
+#gameOverScreen h1 {
+    margin-top: 0;
+}
+
+#gameOverScreen button {
+    padding: 10px 20px;
+    font-size: 1.2em;
+    cursor: pointer;
+}
