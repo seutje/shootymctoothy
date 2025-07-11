@@ -455,3 +455,27 @@ animate();
 
 // Load high scores when the script starts.
 loadHighScores();
+
+// Get the start screen element.
+const startScreen = document.getElementById('startScreen');
+// Get the start button element.
+const startButton = document.getElementById('startButton');
+
+// Initially pause the game.
+gamePaused = true;
+
+// Add event listener for the start button.
+startButton.addEventListener('click', () => {
+    // Hide the start screen.
+    startScreen.style.display = 'none';
+    // Unpause the game.
+    gamePaused = false;
+    // Request pointer lock.
+    document.body.requestPointerLock();
+
+    // Reset enemy shot timers.
+    enemies.forEach(enemy => {
+        // Set the last shot time for the enemy to the current time.
+        enemy.lastShotTime = Date.now();
+    });
+});
