@@ -994,6 +994,26 @@ function startGame() {
     });
 }
 
+// The function to draw the crosshair.
+function drawCrosshair() {
+    // Set the stroke color to white.
+    uiContext.strokeStyle = 'white';
+    // Set the line width to two pixels.
+    uiContext.lineWidth = 2;
+    // Begin a new path for the crosshair.
+    uiContext.beginPath();
+    // Move to the start of the horizontal line.
+    uiContext.moveTo(uiCanvas.width / 2 - 10, uiCanvas.height / 2);
+    // Draw to the end of the horizontal line.
+    uiContext.lineTo(uiCanvas.width / 2 + 10, uiCanvas.height / 2);
+    // Move to the start of the vertical line.
+    uiContext.moveTo(uiCanvas.width / 2, uiCanvas.height / 2 - 10);
+    // Draw to the end of the vertical line.
+    uiContext.lineTo(uiCanvas.width / 2, uiCanvas.height / 2 + 10);
+    // Render the lines on the canvas.
+    uiContext.stroke();
+}
+
 // Function to draw the user interface.
 function drawUI() {
     // Clear the entire UI canvas.
@@ -1008,6 +1028,11 @@ function drawUI() {
     uiContext.fillText('Health: ' + health, 10, 60);
     // Draw the FPS text.
     uiContext.fillText('FPS: ' + fps, uiCanvas.width - 100, 30);
+    // Check if the game is active.
+    if (gameStarted && !gameOver && !gamePaused) {
+        // Draw the crosshair when the player is in control.
+        drawCrosshair();
+    }
     // Check if the game is paused during play.
     if (gamePaused && gameStarted && !gameOver) {
         // Set a translucent background color.
