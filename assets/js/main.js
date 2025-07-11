@@ -126,40 +126,55 @@ function saveHighScores() {
 
 // Function to display high scores.
 function displayHighScores() {
-    // Get the high scores list element.
-    const highScoresList = document.getElementById('highScoresList');
-    // Clear the current list.
-    highScoresList.innerHTML = '';
-    // Iterate over high scores and create list items.
-    highScores.forEach(scoreEntry => {
-        // Create a new list item.
-        const listItem = document.createElement('li');
-        // Set the text content of the list item.
-        listItem.textContent = `${scoreEntry.name}: ${scoreEntry.score}`;
-        // Append the list item to the list.
-        highScoresList.appendChild(listItem);
-    });
+    // The UI canvas will display the high scores.
+    return highScores.map(scoreEntry => `${scoreEntry.name}: ${scoreEntry.score}`);
 }
 
 // Initialize the score.
 let score = 0;
-// Get the score element.
-const scoreElement = document.getElementById('score');
-
 // Initialize player health.
 let health = 100;
-// Get the health element.
-const healthElement = document.getElementById('health');
-// Get the FPS counter element.
-const fpsCounter = document.getElementById('fpsCounter');
+// Create an offscreen canvas for rendering UI textures.
+const uiCanvas = document.createElement('canvas');
+// Set the width of the offscreen canvas.
+uiCanvas.width = window.innerWidth;
+// Set the height of the offscreen canvas.
+uiCanvas.height = window.innerHeight;
+// Get the 2D context from the offscreen canvas.
+const uiContext = uiCanvas.getContext('2d');
+// Create a texture from the offscreen canvas.
+const uiTexture = new THREE.CanvasTexture(uiCanvas);
+// Create a sprite material using the texture.
+const uiMaterial = new THREE.SpriteMaterial({ map: uiTexture, depthTest: false });
+// Create a sprite to display the UI.
+const uiSprite = new THREE.Sprite(uiMaterial);
+// Position the sprite slightly in front of the camera.
+uiSprite.position.set(0, 0, -1);
+// Add the sprite to the camera so it stays fixed on screen.
+camera.add(uiSprite);
+// Function to update the sprite scale on resize.
+function updateUIScale() {
+    // Calculate the visible height at a depth of one unit.
+    const height = 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+    // Set the sprite scale to cover the view.
+    uiSprite.scale.set(height * camera.aspect, height, 1);
+}
+// Call the scale update once at startup.
+updateUIScale();
 
 // Variables for FPS calculation.
 let lastFrameTime = 0;
 let frameCount = 0;
 let fps = 0;
+// Variable to store the last time the UI was updated.
+let lastUIUpdate = -1000;
 
 // Variable to track if the game is paused.
 let gamePaused = false;
+// Variable to track if the game has ended.
+let gameOver = false;
+// Variable to track if the game has started.
+let gameStarted = false;
 // Variable to store the animation frame ID.
 let animationFrameId;
 
@@ -436,9 +451,23 @@ function onMouseMove(event) {
 
 // The function to handle mouse down events.
 function onMouseDown(event) {
+    // Restart the game if it is over.
+    if (gameOver) {
+        // Reload the page to reset the state.
+        location.reload();
+        // Exit because the click triggered a restart.
+        return;
+    }
+    // Start the game if it has not begun.
+    if (!gameStarted) {
+        // Call the startGame function.
+        startGame();
+        // Exit because the click was used to start the game.
+        return;
+    }
     // Do nothing if the game is paused.
     if (gamePaused) {
-        // Exit early to allow UI clicks.
+        // Exit early because input should be ignored.
         return;
     }
     // Lock the pointer to the document body.
@@ -458,6 +487,12 @@ function onWindowResize() {
     camera.updateProjectionMatrix();
     // Set the size of the renderer to the new window size.
     renderer.setSize(window.innerWidth, window.innerHeight);
+    // Update the offscreen canvas width.
+    uiCanvas.width = window.innerWidth;
+    // Update the offscreen canvas height.
+    uiCanvas.height = window.innerHeight;
+    // Update the UI sprite scale for the new aspect ratio.
+    updateUIScale();
 }
 
 // The function to create a projectile.
@@ -558,8 +593,6 @@ function animate(currentTime) {
     if (currentTime > lastFrameTime + 1000) {
         // Calculate FPS.
         fps = Math.round(frameCount * 1000 / (currentTime - lastFrameTime));
-        // Update FPS counter.
-        fpsCounter.textContent = 'FPS: ' + fps;
         // Reset last frame time.
         lastFrameTime = currentTime;
         // Reset frame count.
@@ -568,6 +601,16 @@ function animate(currentTime) {
 
     // If the game is paused, do not update game logic.
     if (gamePaused) {
+        // Render the scene without updates.
+        renderer.render(scene, camera);
+        // Check if one second has passed since the last UI update.
+        if (currentTime - lastUIUpdate >= 1000) {
+            // Record the time of this UI update.
+            lastUIUpdate = currentTime;
+            // Draw the UI overlay.
+            drawUI();
+        }
+        // Exit early to skip game logic.
         return;
     }
 
@@ -663,8 +706,6 @@ function animate(currentTime) {
                 enemy.position.z = (Math.random() - 0.5) * 50;
                 // Increment the score.
                 score += 10;
-                // Update the score display.
-                scoreElement.textContent = 'Score: ' + score;
                 // Break the inner loop since the projectile is gone.
                 break;
             }
@@ -695,22 +736,8 @@ function animate(currentTime) {
             enemyProjectiles.splice(i, 1);
             // Decrease player health.
             health -= 10;
-            // Update health display.
-            healthElement.textContent = 'Health: ' + health;
             // Check if player is dead.
             if (health <= 0) {
-                // Get the game over screen element.
-                const gameOverScreen = document.getElementById('gameOverScreen');
-                // Get the final score element.
-                const finalScoreElement = document.getElementById('finalScore');
-                // Get the restart button element.
-                const restartButton = document.getElementById('restartButton');
-
-                // Display the game over screen.
-                gameOverScreen.style.display = 'block';
-                // Update the final score display.
-                finalScoreElement.textContent = 'Final Score: ' + score;
-
                 // Determine if the current score qualifies for the high score list.
                 const qualifies = highScores.length < MAX_HIGH_SCORES || score > Math.min(...highScores.map(entry => entry.score));
                 // Check if the score qualifies for the top five.
@@ -726,21 +753,14 @@ function animate(currentTime) {
                     // Save high scores to local storage.
                     saveHighScores();
                 }
-                // Display high scores.
-                displayHighScores();
-
                 // Stop the animation loop.
                 gamePaused = true;
+                // Indicate that the game has ended.
+                gameOver = true;
                 // Stop the soundtrack when the game ends.
                 stopSoundtrack();
                 // Release the mouse pointer.
                 document.exitPointerLock();
-
-                // Add event listener for restart button.
-                restartButton.addEventListener('click', () => {
-                    // Reload the page to restart the game.
-                    location.reload();
-                });
             }
         }
     }
@@ -803,6 +823,13 @@ function animate(currentTime) {
 
     // Render the scene from the camera's perspective.
     renderer.render(scene, camera);
+    // Update the UI only once per second.
+    if (currentTime - lastUIUpdate >= 1000) {
+        // Record the time of this UI update.
+        lastUIUpdate = currentTime;
+        // Draw the UI overlay.
+        drawUI();
+    }
 }
 
 // Start the animation loop.
@@ -811,18 +838,13 @@ animate();
 // Load high scores when the script starts.
 loadHighScores();
 
-// Get the start screen element.
-const startScreen = document.getElementById('startScreen');
-// Get the start button element.
-const startButton = document.getElementById('startButton');
-
 // Initially pause the game.
 gamePaused = true;
 
-// Add event listener for the start button.
-startButton.addEventListener('click', () => {
-    // Hide the start screen.
-    startScreen.style.display = 'none';
+// Function to start the game.
+function startGame() {
+    // Hide the start screen by setting the started flag.
+    gameStarted = true;
     // Unpause the game.
     gamePaused = false;
     // Start the soundtrack.
@@ -835,4 +857,65 @@ startButton.addEventListener('click', () => {
         // Set the last shot time for the enemy to the current time.
         enemy.lastShotTime = Date.now();
     });
-});
+}
+
+// Function to draw the user interface.
+function drawUI() {
+    // Clear the entire UI canvas.
+    uiContext.clearRect(0, 0, uiCanvas.width, uiCanvas.height);
+    // Set the text color.
+    uiContext.fillStyle = 'black';
+    // Set the font style.
+    uiContext.font = '20px sans-serif';
+    // Draw the score text.
+    uiContext.fillText('Score: ' + score, 10, 30);
+    // Draw the health text.
+    uiContext.fillText('Health: ' + health, 10, 60);
+    // Draw the FPS text.
+    uiContext.fillText('FPS: ' + fps, uiCanvas.width - 100, 30);
+    // Check if the game has not started.
+    if (!gameStarted && !gameOver) {
+        // Set a translucent background color.
+        uiContext.fillStyle = 'rgba(0,0,0,0.8)';
+        // Draw the background rectangle.
+        uiContext.fillRect(uiCanvas.width / 2 - 150, uiCanvas.height / 2 - 100, 300, 200);
+        // Set the text color for the title.
+        uiContext.fillStyle = 'white';
+        // Set the large font for the title.
+        uiContext.font = '30px sans-serif';
+        // Draw the game title.
+        uiContext.fillText('ShootyMcToothy', uiCanvas.width / 2 - 120, uiCanvas.height / 2 - 40);
+        // Set the font for the prompt.
+        uiContext.font = '20px sans-serif';
+        // Draw the start prompt.
+        uiContext.fillText('Click to start', uiCanvas.width / 2 - 70, uiCanvas.height / 2 + 20);
+    }
+    // Check if the game is over.
+    if (gameOver) {
+        // Set a translucent background color.
+        uiContext.fillStyle = 'rgba(0,0,0,0.8)';
+        // Draw the background rectangle.
+        uiContext.fillRect(uiCanvas.width / 2 - 150, uiCanvas.height / 2 - 150, 300, 300);
+        // Set the text color for the game over text.
+        uiContext.fillStyle = 'white';
+        // Set the large font for the header.
+        uiContext.font = '30px sans-serif';
+        // Draw the game over header.
+        uiContext.fillText('Game Over!', uiCanvas.width / 2 - 95, uiCanvas.height / 2 - 60);
+        // Set the font for the score.
+        uiContext.font = '20px sans-serif';
+        // Draw the final score text.
+        uiContext.fillText('Final Score: ' + score, uiCanvas.width / 2 - 80, uiCanvas.height / 2 - 20);
+        // Get the list of high scores.
+        const scores = displayHighScores();
+        // Iterate over each high score.
+        for (let i = 0; i < scores.length; i++) {
+            // Draw the current high score line.
+            uiContext.fillText(scores[i], uiCanvas.width / 2 - 80, uiCanvas.height / 2 + 20 + i * 20);
+        }
+        // Draw the restart prompt.
+        uiContext.fillText('Click to restart', uiCanvas.width / 2 - 80, uiCanvas.height / 2 + 20 + scores.length * 20 + 20);
+    }
+    // Inform Three.js that the texture has changed.
+    uiTexture.needsUpdate = true;
+}
