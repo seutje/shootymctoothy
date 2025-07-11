@@ -69,7 +69,7 @@ createObstacle(10, 10);
 createObstacle(-10, -10);
 createObstacle(15, -15);
 createObstacle(-15, 15);
-createObstacle(0, 0);
+createObstacle(10, 0);
 
 // Function to check if a position collides with obstacles.
 function collidesWithObstacles(position, radius) {
