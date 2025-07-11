@@ -174,7 +174,7 @@ function animate() {
     velocity.set(0, 0, 0);
 
     // Get the player's forward/backward movement.
-    if (keys['w']) {
+    if (keys['w'] || keys['z']) {
         // Move forward.
         velocity.z -= 1;
     }
@@ -184,7 +184,7 @@ function animate() {
         velocity.z += 1;
     }
     // Get the player's sideways movement.
-    if (keys['a']) {
+    if (keys['a'] || keys['q']) {
         // Move left.
         velocity.x -= 1;
     }
