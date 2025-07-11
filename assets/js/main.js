@@ -107,6 +107,13 @@ const scoreElement = document.getElementById('score');
 let health = 100;
 // Get the health element.
 const healthElement = document.getElementById('health');
+// Get the FPS counter element.
+const fpsCounter = document.getElementById('fpsCounter');
+
+// Variables for FPS calculation.
+let lastFrameTime = 0;
+let frameCount = 0;
+let fps = 0;
 
 // Variable to track if the game is paused.
 let gamePaused = false;
@@ -267,9 +274,23 @@ for (let i = 0; i < 10; i++) {
 }
 
 // The main animation loop.
-function animate() {
+function animate(currentTime) {
     // Request the next animation frame.
     animationFrameId = requestAnimationFrame(animate);
+
+    // Calculate FPS.
+    frameCount++;
+    // Check if one second has passed.
+    if (currentTime > lastFrameTime + 1000) {
+        // Calculate FPS.
+        fps = Math.round(frameCount * 1000 / (currentTime - lastFrameTime));
+        // Update FPS counter.
+        fpsCounter.textContent = 'FPS: ' + fps;
+        // Reset last frame time.
+        lastFrameTime = currentTime;
+        // Reset frame count.
+        frameCount = 0;
+    }
 
     // If the game is paused, do not update game logic.
     if (gamePaused) {
