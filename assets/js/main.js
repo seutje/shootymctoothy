@@ -130,6 +130,15 @@ const velocity = new THREE.Vector3();
 
 // Create a new AudioContext for the soundtrack.
 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+// Create a noise buffer for the hi-hats.
+const noiseBuffer = audioContext.createBuffer(1, audioContext.sampleRate, audioContext.sampleRate);
+// Get the data array from the noise buffer.
+const noiseData = noiseBuffer.getChannelData(0);
+// Fill the noise buffer with random values.
+for (let i = 0; i < audioContext.sampleRate; i++) {
+    // Generate a random value between -1 and 1.
+    noiseData[i] = Math.random() * 2 - 1;
+}
 // Variable to store the interval ID for the soundtrack loop.
 let soundtrackInterval;
 
@@ -151,6 +160,62 @@ function playNote(frequency, duration) {
     oscillator.start();
     // Stop the oscillator after the given duration.
     oscillator.stop(audioContext.currentTime + duration);
+}
+
+// The function to play a kick drum.
+function playKick() {
+    // Create an oscillator for the kick.
+    const oscillator = audioContext.createOscillator();
+    // Create a gain node to shape the volume envelope.
+    const gainNode = audioContext.createGain();
+    // Set the oscillator type to sine for a smooth kick.
+    oscillator.type = 'sine';
+    // Connect the oscillator to the gain node.
+    oscillator.connect(gainNode);
+    // Connect the gain node to the destination.
+    gainNode.connect(audioContext.destination);
+    // Set the initial frequency of the kick.
+    oscillator.frequency.setValueAtTime(150, audioContext.currentTime);
+    // Ramp the frequency down for the thump effect.
+    oscillator.frequency.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.5);
+    // Set the initial gain value.
+    gainNode.gain.setValueAtTime(1, audioContext.currentTime);
+    // Fade out the gain quickly.
+    gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.5);
+    // Start the oscillator.
+    oscillator.start();
+    // Stop the oscillator after half a second.
+    oscillator.stop(audioContext.currentTime + 0.5);
+}
+
+// The function to play a hi-hat sound.
+function playHiHat() {
+    // Create a buffer source for the noise.
+    const noiseSource = audioContext.createBufferSource();
+    // Reuse the global noise buffer for the hi-hat.
+    noiseSource.buffer = noiseBuffer;
+    // Create a high-pass filter to shape the noise.
+    const filter = audioContext.createBiquadFilter();
+    // Set the filter type to highpass.
+    filter.type = 'highpass';
+    // Set the cutoff frequency of the filter.
+    filter.frequency.value = 5000;
+    // Create a gain node for the volume envelope.
+    const gainNode = audioContext.createGain();
+    // Set the initial gain value.
+    gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+    // Fade out the gain quickly for a short tick.
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.05);
+    // Connect the noise source to the filter.
+    noiseSource.connect(filter);
+    // Connect the filter to the gain node.
+    filter.connect(gainNode);
+    // Connect the gain node to the destination.
+    gainNode.connect(audioContext.destination);
+    // Start the noise source.
+    noiseSource.start();
+    // Stop the noise source after a short time.
+    noiseSource.stop(audioContext.currentTime + 0.05);
 }
 
 // The function to start the soundtrack.
@@ -203,6 +268,13 @@ function startSoundtrack() {
     soundtrackInterval = setInterval(() => {
         // Play the current note.
         playNote(riff[index], 0.25);
+        // Play a kick on the first beat of each measure.
+        if (index % 4 === 0) {
+            // Call the kick drum function.
+            playKick();
+        }
+        // Play a hi-hat on every beat.
+        playHiHat();
         // Advance to the next note.
         index = (index + 1) % riff.length;
     }, 250);
