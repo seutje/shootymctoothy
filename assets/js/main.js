@@ -49,6 +49,11 @@ const enemies = [];
 // Create an array to store projectile objects.
 const projectiles = [];
 
+// Initialize the score.
+let score = 0;
+// Get the score element.
+const scoreElement = document.getElementById('score');
+
 // Define the player's movement speed.
 const moveSpeed = 0.1;
 // Define the player's mouse sensitivity.
@@ -233,10 +238,14 @@ function animate() {
                 scene.remove(projectile);
                 // Remove the projectile from the array.
                 projectiles.splice(i, 1);
-                // Remove the enemy from the scene.
-                scene.remove(enemy);
-                // Remove the enemy from the array.
-                enemies.splice(j, 1);
+                // Respawn the enemy.
+                enemy.position.x = (Math.random() - 0.5) * 50;
+                // Respawn the enemy.
+                enemy.position.z = (Math.random() - 0.5) * 50;
+                // Increment the score.
+                score += 10;
+                // Update the score display.
+                scoreElement.textContent = 'Score: ' + score;
                 // Break the inner loop since the projectile is gone.
                 break;
             }
