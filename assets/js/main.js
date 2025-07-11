@@ -47,6 +47,49 @@ scene.add(yawObject);
 // Add the camera to the yaw object.
 yawObject.add(camera);
 
+// Create an array to store obstacle objects.
+const obstacles = [];
+// Function to create an obstacle at a given position.
+function createObstacle(x, z) {
+    // Create a box geometry for the obstacle.
+    const obstacleGeometry = new THREE.BoxGeometry(5, 5, 5);
+    // Create a gray material for the obstacle.
+    const obstacleMaterial = new THREE.MeshStandardMaterial({ color: 0x808080 });
+    // Create a mesh from the obstacle geometry and material.
+    const obstacle = new THREE.Mesh(obstacleGeometry, obstacleMaterial);
+    // Set the obstacle position.
+    obstacle.position.set(x, 2.5, z);
+    // Add the obstacle to the scene.
+    scene.add(obstacle);
+    // Add the obstacle to the obstacles array.
+    obstacles.push(obstacle);
+}
+// Create several obstacles at fixed positions.
+createObstacle(10, 10);
+createObstacle(-10, -10);
+createObstacle(15, -15);
+createObstacle(-15, 15);
+createObstacle(0, 0);
+
+// Function to check if a position collides with obstacles.
+function collidesWithObstacles(position, radius) {
+    // Iterate over every obstacle.
+    for (let i = 0; i < obstacles.length; i++) {
+        // Get the current obstacle.
+        const obstacle = obstacles[i];
+        // Define half size of the obstacle for bounds checking.
+        const halfSize = 2.5;
+        // Check for overlap on the x and z axes.
+        if (Math.abs(position.x - obstacle.position.x) < halfSize + radius &&
+            Math.abs(position.z - obstacle.position.z) < halfSize + radius) {
+            // Return true if there is a collision.
+            return true;
+        }
+    }
+    // Return false if no collisions were detected.
+    return false;
+}
+
 // Create an array to store enemy objects.
 const enemies = [];
 // Create an array to store projectile objects.
@@ -487,10 +530,19 @@ function animate(currentTime) {
         velocity.multiplyScalar(moveSpeed);
     }
 
-    // Apply the velocity to the yaw object.
-    yawObject.translateX(velocity.x);
-    // Apply the velocity to the yaw object.
-    yawObject.translateZ(velocity.z);
+    // Create a copy of the player's position for collision testing.
+    const potentialPosition = yawObject.position.clone();
+    // Create a vector for movement in local space.
+    const moveVector = new THREE.Vector3(velocity.x, 0, velocity.z);
+    // Rotate the movement vector by the player's yaw rotation.
+    moveVector.applyAxisAngle(new THREE.Vector3(0, 1, 0), yawObject.rotation.y);
+    // Add the movement vector to the potential position.
+    potentialPosition.add(moveVector);
+    // Check for collisions with obstacles before moving.
+    if (!collidesWithObstacles(potentialPosition, 1)) {
+        // Update the player's position if no collision occurs.
+        yawObject.position.copy(potentialPosition);
+    }
 
     // Update the position of each projectile.
     for (let i = projectiles.length - 1; i >= 0; i--) {
@@ -498,6 +550,15 @@ function animate(currentTime) {
         const projectile = projectiles[i];
         // Update the projectile's position based on its velocity.
         projectile.position.add(projectile.velocity);
+        // Remove the projectile if it hits an obstacle.
+        if (collidesWithObstacles(projectile.position, 0.5)) {
+            // Remove the projectile mesh from the scene.
+            scene.remove(projectile);
+            // Remove the projectile from the projectiles array.
+            projectiles.splice(i, 1);
+            // Continue to the next projectile.
+            continue;
+        }
 
         // Check for collisions with enemies.
         for (let j = enemies.length - 1; j >= 0; j--) {
@@ -529,6 +590,15 @@ function animate(currentTime) {
         const projectile = enemyProjectiles[i];
         // Update the projectile's position based on its velocity.
         projectile.position.add(projectile.velocity);
+        // Remove the projectile if it hits an obstacle.
+        if (collidesWithObstacles(projectile.position, 0.5)) {
+            // Remove the projectile mesh from the scene.
+            scene.remove(projectile);
+            // Remove the projectile from the enemy projectiles array.
+            enemyProjectiles.splice(i, 1);
+            // Continue to the next projectile.
+            continue;
+        }
 
         // Check for collision with the player.
         if (projectile.position.distanceTo(yawObject.position) < 1) {
@@ -587,8 +657,20 @@ function animate(currentTime) {
     for (let i = 0; i < enemies.length; i++) {
         // Get the current enemy.
         const enemy1 = enemies[i];
-        // Update the enemy's position based on its velocity.
-        enemy1.position.add(enemy1.velocity);
+        // Create a copy of the enemy position for collision testing.
+        const enemyNext = enemy1.position.clone();
+        // Add the enemy's velocity to the potential position.
+        enemyNext.add(enemy1.velocity);
+        // Check for collisions with obstacles before moving.
+        if (!collidesWithObstacles(enemyNext, 1)) {
+            // Update the enemy's position if no collision occurs.
+            enemy1.position.copy(enemyNext);
+        } else {
+            // Reverse the enemy velocity if a collision occurs.
+            enemy1.velocity.x *= -1;
+            // Reverse the enemy velocity on the z axis as well.
+            enemy1.velocity.z *= -1;
+        }
 
         // Check if the enemy has hit the edge of the play area.
         if (enemy1.position.x < -250 || enemy1.position.x > 250) {
