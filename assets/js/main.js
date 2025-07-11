@@ -128,6 +128,92 @@ const mouseSpeed = 0.002;
 // Create a new vector to store the player's velocity.
 const velocity = new THREE.Vector3();
 
+// Create a new AudioContext for the soundtrack.
+const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+// Variable to store the interval ID for the soundtrack loop.
+let soundtrackInterval;
+
+// The function to play a single note.
+function playNote(frequency, duration) {
+    // Create an oscillator node.
+    const oscillator = audioContext.createOscillator();
+    // Create a gain node for volume control.
+    const gainNode = audioContext.createGain();
+    // Set the frequency of the oscillator.
+    oscillator.frequency.value = frequency;
+    // Set the gain value of the note.
+    gainNode.gain.value = 0.1;
+    // Connect the oscillator to the gain node.
+    oscillator.connect(gainNode);
+    // Connect the gain node to the destination.
+    gainNode.connect(audioContext.destination);
+    // Start the oscillator.
+    oscillator.start();
+    // Stop the oscillator after the given duration.
+    oscillator.stop(audioContext.currentTime + duration);
+}
+
+// The function to start the soundtrack.
+function startSoundtrack() {
+    // Resume the audio context if it is suspended.
+    if (audioContext.state === 'suspended') {
+        // Resume the audio context.
+        audioContext.resume();
+    }
+    // Frequencies for a 64-note E1M1-inspired riff with variation.
+    const riff = [
+        // Measure 1.
+        329.63, 392.0, 415.3, 392.0,
+        // Measure 2.
+        329.63, 392.0, 392.0, 415.3,
+        // Measure 3.
+        329.63, 392.0, 415.3, 392.0,
+        // Measure 4.
+        246.94, 293.66, 311.13, 293.66,
+        // Measure 5.
+        261.63, 311.13, 329.63, 311.13,
+        // Measure 6.
+        261.63, 311.13, 329.63, 261.63,
+        // Measure 7.
+        261.63, 311.13, 329.63, 311.13,
+        // Measure 8.
+        196.0, 233.08, 246.94, 233.08,
+        // Measure 9.
+        220.0, 261.63, 277.18, 261.63,
+        // Measure 10.
+        220.0, 261.63, 277.18, 220.0,
+        // Measure 11.
+        220.0, 261.63, 277.18, 261.63,
+        // Measure 12.
+        174.61, 196.0, 207.65, 196.0,
+        // Measure 13.
+        174.61, 220.0, 246.94, 220.0,
+        // Measure 14.
+        174.61, 220.0, 246.94, 174.61,
+        // Measure 15.
+        174.61, 220.0, 246.94, 220.0,
+        // Measure 16.
+        196.0, 246.94, 261.63, 246.94
+    ];
+    // Set the current note index.
+    let index = 0;
+    // Clear any existing interval.
+    clearInterval(soundtrackInterval);
+    // Start a new interval to play the riff.
+    soundtrackInterval = setInterval(() => {
+        // Play the current note.
+        playNote(riff[index], 0.25);
+        // Advance to the next note.
+        index = (index + 1) % riff.length;
+    }, 250);
+}
+
+// The function to stop the soundtrack.
+function stopSoundtrack() {
+    // Clear the interval to stop the riff.
+    clearInterval(soundtrackInterval);
+}
+
 // Add an event listener for mouse movement to control the camera.
 document.addEventListener('mousemove', onMouseMove, false);
 // Add an event listener for mouse clicks to fire projectiles.
@@ -411,6 +497,8 @@ function animate(currentTime) {
 
                 // Stop the animation loop.
                 gamePaused = true;
+                // Stop the soundtrack when the game ends.
+                stopSoundtrack();
                 // Release the mouse pointer.
                 document.exitPointerLock();
 
@@ -491,6 +579,8 @@ startButton.addEventListener('click', () => {
     startScreen.style.display = 'none';
     // Unpause the game.
     gamePaused = false;
+    // Start the soundtrack.
+    startSoundtrack();
     // Request pointer lock.
     document.body.requestPointerLock();
 
