@@ -182,6 +182,19 @@ for (let i = 0; i < audioContext.sampleRate; i++) {
     // Generate a random value between -1 and 1.
     noiseData[i] = Math.random() * 2 - 1;
 }
+// Create a convolver node for reverb effects.
+const reverbNode = audioContext.createConvolver();
+// Create a buffer for the reverb impulse response.
+const reverbBuffer = audioContext.createBuffer(1, audioContext.sampleRate * 2, audioContext.sampleRate);
+// Get the data array for the reverb buffer.
+const reverbData = reverbBuffer.getChannelData(0);
+// Fill the reverb buffer with decaying noise for a simple impulse response.
+for (let i = 0; i < reverbData.length; i++) {
+    // Generate noise scaled by the remaining length.
+    reverbData[i] = (Math.random() * 2 - 1) * (1 - i / reverbData.length);
+}
+// Assign the generated buffer to the convolver node.
+reverbNode.buffer = reverbBuffer;
 // Variable to store the interval ID for the soundtrack loop.
 let soundtrackInterval;
 
@@ -259,6 +272,38 @@ function playHiHat() {
     noiseSource.start();
     // Stop the noise source after a short time.
     noiseSource.stop(audioContext.currentTime + 0.05);
+}
+
+// The function to play the shooting sound effect.
+function playShootSound() {
+    // Create a buffer source using the shared noise buffer.
+    const noiseSource = audioContext.createBufferSource();
+    // Reuse the global noise buffer for the shot.
+    noiseSource.buffer = noiseBuffer;
+    // Create a bandpass filter to shape the noise.
+    const filter = audioContext.createBiquadFilter();
+    // Set the filter type to bandpass.
+    filter.type = 'bandpass';
+    // Center the bandpass filter around 800 Hz.
+    filter.frequency.value = 800;
+    // Create a gain node to form the volume envelope.
+    const gainNode = audioContext.createGain();
+    // Set the initial gain value to start louder than the hi-hat.
+    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+    // Fade the gain out over a longer period than the hi-hat.
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+    // Connect the noise source to the filter.
+    noiseSource.connect(filter);
+    // Connect the filter to the gain node.
+    filter.connect(gainNode);
+    // Connect the gain node to the reverb effect.
+    gainNode.connect(reverbNode);
+    // Connect the reverb node to the destination.
+    reverbNode.connect(audioContext.destination);
+    // Start the noise source immediately.
+    noiseSource.start();
+    // Stop the noise source after 0.3 seconds.
+    noiseSource.stop(audioContext.currentTime + 0.3);
 }
 
 // The function to start the soundtrack.
@@ -414,6 +459,8 @@ function createProjectile() {
     scene.add(projectile);
     // Add the projectile to the projectiles array.
     projectiles.push(projectile);
+    // Play the shooting sound effect.
+    playShootSound();
 }
 
 // The function to create an enemy projectile.
