@@ -160,8 +160,41 @@ function startSoundtrack() {
         // Resume the audio context.
         audioContext.resume();
     }
-    // Frequencies for a simple E1M1-inspired riff.
-    const riff = [329.63, 392.0, 415.3, 329.63];
+    // Frequencies for a 64-note E1M1-inspired riff with variation.
+    const riff = [
+        // Measure 1.
+        329.63, 392.0, 415.3, 392.0,
+        // Measure 2.
+        329.63, 392.0, 392.0, 415.3,
+        // Measure 3.
+        329.63, 392.0, 415.3, 392.0,
+        // Measure 4.
+        246.94, 293.66, 311.13, 293.66,
+        // Measure 5.
+        261.63, 311.13, 329.63, 311.13,
+        // Measure 6.
+        261.63, 311.13, 329.63, 261.63,
+        // Measure 7.
+        261.63, 311.13, 329.63, 311.13,
+        // Measure 8.
+        196.0, 233.08, 246.94, 233.08,
+        // Measure 9.
+        220.0, 261.63, 277.18, 261.63,
+        // Measure 10.
+        220.0, 261.63, 277.18, 220.0,
+        // Measure 11.
+        220.0, 261.63, 277.18, 261.63,
+        // Measure 12.
+        174.61, 196.0, 207.65, 196.0,
+        // Measure 13.
+        174.61, 220.0, 246.94, 220.0,
+        // Measure 14.
+        174.61, 220.0, 246.94, 174.61,
+        // Measure 15.
+        174.61, 220.0, 246.94, 220.0,
+        // Measure 16.
+        196.0, 246.94, 261.63, 246.94
+    ];
     // Set the current note index.
     let index = 0;
     // Clear any existing interval.
