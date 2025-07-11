@@ -171,6 +171,17 @@ const mouseSpeed = 0.002;
 // Create a new vector to store the player's velocity.
 const velocity = new THREE.Vector3();
 
+// Define the gravity force applied each frame.
+const gravity = -0.01;
+// Store the player's vertical velocity for jumping.
+let verticalVelocity = 0;
+// Set the upward speed when the player jumps.
+const jumpSpeed = 0.2;
+// Store the y position representing the ground level.
+const groundLevel = 2;
+// Track whether the player is currently on the ground.
+let isGrounded = true;
+
 // Create a new AudioContext for the soundtrack.
 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
 // Create a noise buffer for the hi-hats.
@@ -347,6 +358,16 @@ const keys = {};
 function onKeyDown(event) {
     // Set the key state to true.
     keys[event.key.toLowerCase()] = true;
+    // Check if the spacebar was pressed.
+    if (event.code === 'Space') {
+        // Verify the player is on the ground.
+        if (isGrounded) {
+            // Set the vertical velocity to start the jump.
+            verticalVelocity = jumpSpeed;
+            // Mark that the player is no longer on the ground.
+            isGrounded = false;
+        }
+    }
 }
 
 // The function to handle keyup events.
@@ -547,6 +568,20 @@ function animate(currentTime) {
     if (!collidesWithObstacles(potentialPosition, 1)) {
         // Update the player's position if no collision occurs.
         yawObject.position.copy(potentialPosition);
+    }
+
+    // Apply gravity to the vertical velocity.
+    verticalVelocity += gravity;
+    // Add the vertical velocity to the player's y position.
+    yawObject.position.y += verticalVelocity;
+    // Check if the player has landed on the ground.
+    if (yawObject.position.y <= groundLevel) {
+        // Reset the player's y position to ground level.
+        yawObject.position.y = groundLevel;
+        // Reset the vertical velocity when on the ground.
+        verticalVelocity = 0;
+        // Mark the player as grounded.
+        isGrounded = true;
     }
 
     // Update the position of each projectile.
