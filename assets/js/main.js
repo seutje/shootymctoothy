@@ -361,34 +361,30 @@ function playHiHat() {
 
 // The function to play the shooting sound effect.
 function playShootSound() {
-    // Create a buffer source using the shared noise buffer.
-    const noiseSource = audioContext.createBufferSource();
-    // Reuse the global noise buffer for the shot.
-    noiseSource.buffer = noiseBuffer;
-    // Create a bandpass filter to shape the noise.
-    const filter = audioContext.createBiquadFilter();
-    // Set the filter type to bandpass.
-    filter.type = 'bandpass';
-    // Center the bandpass filter around 800 Hz.
-    filter.frequency.value = 800;
-    // Create a gain node to form the volume envelope.
+    // Create an oscillator for the laser sound.
+    const oscillator = audioContext.createOscillator();
+    // Set the oscillator type to square for a bright tone.
+    oscillator.type = 'square';
+    // Create a gain node to control the volume envelope.
     const gainNode = audioContext.createGain();
-    // Set the initial gain value to 0.8 so the shot stands out more.
-    gainNode.gain.setValueAtTime(0.8, audioContext.currentTime);
-    // Fade the gain out over a longer period than the hi-hat.
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
-    // Connect the noise source to the filter.
-    noiseSource.connect(filter);
-    // Connect the filter to the gain node.
-    filter.connect(gainNode);
+    // Start the frequency high for the initial pitch.
+    oscillator.frequency.setValueAtTime(1200, audioContext.currentTime);
+    // Sweep the frequency down for a laser effect.
+    oscillator.frequency.exponentialRampToValueAtTime(400, audioContext.currentTime + 0.2);
+    // Set the starting gain so the sound is audible.
+    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+    // Fade the gain quickly to create a short pulse.
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+    // Connect the oscillator to the gain node.
+    oscillator.connect(gainNode);
     // Connect the gain node to the reverb effect.
     gainNode.connect(reverbNode);
     // Connect the reverb node to the destination.
     reverbNode.connect(audioContext.destination);
-    // Start the noise source immediately.
-    noiseSource.start();
-    // Stop the noise source after 0.3 seconds.
-    noiseSource.stop(audioContext.currentTime + 0.3);
+    // Start the oscillator immediately.
+    oscillator.start();
+    // Stop the oscillator after 0.2 seconds.
+    oscillator.stop(audioContext.currentTime + 0.2);
 }
 
 // The function to start the soundtrack.
