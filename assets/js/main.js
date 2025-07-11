@@ -134,14 +134,33 @@ function displayHighScores() {
 let score = 0;
 // Initialize player health.
 let health = 100;
-// Get the UI canvas element.
-const uiCanvas = document.getElementById('uiCanvas');
-// Set the UI canvas size to match the window size.
+// Create an offscreen canvas for rendering UI textures.
+const uiCanvas = document.createElement('canvas');
+// Set the width of the offscreen canvas.
 uiCanvas.width = window.innerWidth;
-// Set the height of the UI canvas.
+// Set the height of the offscreen canvas.
 uiCanvas.height = window.innerHeight;
-// Get the 2D drawing context from the UI canvas.
+// Get the 2D context from the offscreen canvas.
 const uiContext = uiCanvas.getContext('2d');
+// Create a texture from the offscreen canvas.
+const uiTexture = new THREE.CanvasTexture(uiCanvas);
+// Create a sprite material using the texture.
+const uiMaterial = new THREE.SpriteMaterial({ map: uiTexture, depthTest: false });
+// Create a sprite to display the UI.
+const uiSprite = new THREE.Sprite(uiMaterial);
+// Position the sprite slightly in front of the camera.
+uiSprite.position.set(0, 0, -1);
+// Add the sprite to the camera so it stays fixed on screen.
+camera.add(uiSprite);
+// Function to update the sprite scale on resize.
+function updateUIScale() {
+    // Calculate the visible height at a depth of one unit.
+    const height = 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+    // Set the sprite scale to cover the view.
+    uiSprite.scale.set(height * camera.aspect, height, 1);
+}
+// Call the scale update once at startup.
+updateUIScale();
 
 // Variables for FPS calculation.
 let lastFrameTime = 0;
@@ -402,10 +421,12 @@ function onWindowResize() {
     camera.updateProjectionMatrix();
     // Set the size of the renderer to the new window size.
     renderer.setSize(window.innerWidth, window.innerHeight);
-    // Update the UI canvas width.
+    // Update the offscreen canvas width.
     uiCanvas.width = window.innerWidth;
-    // Update the UI canvas height.
+    // Update the offscreen canvas height.
     uiCanvas.height = window.innerHeight;
+    // Update the UI sprite scale for the new aspect ratio.
+    updateUIScale();
 }
 
 // The function to create a projectile.
@@ -813,4 +834,6 @@ function drawUI() {
         // Draw the restart prompt.
         uiContext.fillText('Click to restart', uiCanvas.width / 2 - 80, uiCanvas.height / 2 + 20 + scores.length * 20 + 20);
     }
+    // Inform Three.js that the texture has changed.
+    uiTexture.needsUpdate = true;
 }
