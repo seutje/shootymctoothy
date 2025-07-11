@@ -14,12 +14,13 @@ The project follows a simple, no-build-step structure:
 ## Technology Stack
 
 -   **Core Engine**: [Three.js](https://threejs.org/) will be used for 3D rendering.
--   **Loading**: Three.js will be loaded directly from a CDN in `index.html`. No npm/yarn or other package managers are to be used.
+-   **Loading**: Three.js will be loaded directly from a CDN in `index.html`. The game itself does not rely on any build step, though npm is used for running tests.
 
 ## Development Workflow
 
 -   **No Build Step**: The game is designed to run directly in the browser without any compilation or bundling steps.
 -   **Execution**: Open the `index.html` file in a web browser to run the game.
+-   **Testing**: Run `npm test` and fix any errors before committing.
 
 ## Coding Style
 
