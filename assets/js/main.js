@@ -49,6 +49,8 @@ yawObject.add(camera);
 
 // Create an array to store obstacle objects.
 const obstacles = [];
+// Create a buffer distance used when spawning enemies.
+const obstacleSpawnBuffer = 1;
 // Function to create an obstacle at a given position.
 function createObstacle(x, z) {
     // Create a box geometry for the obstacle.
@@ -543,6 +545,56 @@ function createEnemyProjectile(enemy) {
     enemyProjectiles.push(projectile);
 }
 
+// The function to find a valid spawn position for an enemy.
+function findEnemySpawnPosition() {
+    // Track how many attempts have been made.
+    let attempts = 0;
+    // Try multiple times to find a valid location.
+    while (attempts < 100) {
+        // Create a random x position within the play area.
+        const x = (Math.random() - 0.5) * 50;
+        // Create a random z position within the play area.
+        const z = (Math.random() - 0.5) * 50;
+        // Create a vector for the potential spawn position.
+        const position = new THREE.Vector3(x, 1, z);
+        // Increment the attempt counter.
+        attempts++;
+        // Skip this position if it collides with any obstacle.
+        if (collidesWithObstacles(position, 1 + obstacleSpawnBuffer)) {
+            // Continue to the next attempt.
+            continue;
+        }
+        // Skip this position if it is too close to the player.
+        if (position.distanceTo(yawObject.position) < 5) {
+            // Continue to the next attempt.
+            continue;
+        }
+        // Assume the position does not overlap enemies.
+        let overlaps = false;
+        // Check against every existing enemy.
+        for (let i = 0; i < enemies.length; i++) {
+            // Get the current enemy for comparison.
+            const other = enemies[i];
+            // Check if the position is too close to this enemy.
+            if (position.distanceTo(other.position) < 2) {
+                // Mark that an overlap was found.
+                overlaps = true;
+                // Exit the loop early since it overlaps.
+                break;
+            }
+        }
+        // Continue searching if the position overlapped an enemy.
+        if (overlaps) {
+            // Continue to the next attempt.
+            continue;
+        }
+        // Return the valid position if no problems were found.
+        return position;
+    }
+    // Return a default position if all attempts fail.
+    return new THREE.Vector3(0, 1, 0);
+}
+
 // The function to create an enemy.
 function createEnemy() {
     // Create a box geometry for the enemy.
@@ -551,12 +603,14 @@ function createEnemy() {
     const enemyMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
     // Create a mesh from the enemy geometry and material.
     const enemy = new THREE.Mesh(enemyGeometry, enemyMaterial);
-    // Set the enemy's x position to a random value.
-    enemy.position.x = (Math.random() - 0.5) * 50;
-    // Set the enemy's z position to a random value.
-    enemy.position.z = (Math.random() - 0.5) * 50;
+    // Find a valid spawn position for the enemy.
+    const spawn = findEnemySpawnPosition();
+    // Set the enemy's x position.
+    enemy.position.x = spawn.x;
+    // Set the enemy's z position.
+    enemy.position.z = spawn.z;
     // Set the enemy's y position.
-    enemy.position.y = 1;
+    enemy.position.y = spawn.y;
     // Set the last shot time for the enemy.
     enemy.lastShotTime = Date.now();
     // Set the shot interval for the enemy (randomized).
@@ -701,9 +755,13 @@ function animate(currentTime) {
                 // Remove the projectile from the array.
                 projectiles.splice(i, 1);
                 // Respawn the enemy.
-                enemy.position.x = (Math.random() - 0.5) * 50;
-                // Respawn the enemy.
-                enemy.position.z = (Math.random() - 0.5) * 50;
+                const respawn = findEnemySpawnPosition();
+                // Set the enemy's x position.
+                enemy.position.x = respawn.x;
+                // Set the enemy's z position.
+                enemy.position.z = respawn.z;
+                // Set the enemy's y position.
+                enemy.position.y = respawn.y;
                 // Increment the score.
                 score += 10;
                 // Break the inner loop since the projectile is gone.
