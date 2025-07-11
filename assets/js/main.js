@@ -99,6 +99,20 @@ const projectiles = [];
 // Create an array to store enemy projectile objects.
 const enemyProjectiles = [];
 
+// Create a texture object that will hold the enemy texture.
+const enemyTexture = new THREE.Texture();
+// Create an image element to load the enemy texture.
+const enemyImage = new Image();
+// Set up a handler to update the texture once the image loads.
+enemyImage.onload = function () {
+    // Assign the loaded image to the texture.
+    enemyTexture.image = enemyImage;
+    // Inform Three.js that the texture needs an update.
+    enemyTexture.needsUpdate = true;
+};
+// Start loading the enemy texture from the assets folder.
+enemyImage.src = 'assets/images/texture-enemy.png';
+
 // Array to store high scores.
 let highScores = [];
 // Maximum number of high scores to keep.
@@ -599,8 +613,8 @@ function findEnemySpawnPosition() {
 function createEnemy() {
     // Create a box geometry for the enemy.
     const enemyGeometry = new THREE.BoxGeometry(2, 2, 2);
-    // Create a red material for the enemy.
-    const enemyMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+    // Create a material for the enemy using the loaded texture.
+    const enemyMaterial = new THREE.MeshBasicMaterial({ map: enemyTexture });
     // Create a mesh from the enemy geometry and material.
     const enemy = new THREE.Mesh(enemyGeometry, enemyMaterial);
     // Find a valid spawn position for the enemy.
