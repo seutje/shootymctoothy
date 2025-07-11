@@ -1,5 +1,8 @@
 // Create a new Three.js scene.
 const scene = new THREE.Scene();
+// Set the background color of the scene to blue.
+scene.background = new THREE.Color(0x87ceeb);
+
 // Create a new perspective camera.
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 // Create a new WebGL renderer.
