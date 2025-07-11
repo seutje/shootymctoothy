@@ -1,4 +1,3 @@
-
 // Create a new Three.js scene.
 const scene = new THREE.Scene();
 // Create a new perspective camera.
@@ -33,10 +32,17 @@ ground.rotation.x = -Math.PI / 2;
 // Add the ground to the scene.
 scene.add(ground);
 
-// Set the initial camera position.
-camera.position.z = 5;
-// Set the initial camera y position.
-camera.position.y = 2;
+// Create a yaw object to control horizontal rotation.
+const yawObject = new THREE.Object3D();
+// Set the initial position of the yaw object.
+yawObject.position.y = 2;
+// Set the initial z position of the yaw object.
+yawObject.position.z = 5;
+// Add the yaw object to the scene.
+scene.add(yawObject);
+
+// Add the camera to the yaw object.
+yawObject.add(camera);
 
 // Create an array to store enemy objects.
 const enemies = [];
@@ -83,9 +89,9 @@ function onKeyUp(event) {
 function onMouseMove(event) {
     // Check if the pointer is locked.
     if (document.pointerLockElement === document.body) {
-        // Rotate the camera based on mouse movement.
-        camera.rotation.y -= event.movementX * mouseSpeed;
-        // Rotate the camera based on mouse movement.
+        // Rotate the yaw object for horizontal movement.
+        yawObject.rotation.y -= event.movementX * mouseSpeed;
+        // Rotate the camera for vertical movement.
         camera.rotation.x -= event.movementY * mouseSpeed;
         // Clamp the camera's x rotation to prevent flipping.
         camera.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, camera.rotation.x));
@@ -121,11 +127,11 @@ function createProjectile() {
     const projectileMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
     // Create a mesh from the projectile geometry and material.
     const projectile = new THREE.Mesh(projectileGeometry, projectileMaterial);
-    // Set the projectile's initial position to the camera's position.
-    projectile.position.copy(camera.position);
+    // Set the projectile's initial position to the camera's world position.
+    camera.getWorldPosition(projectile.position);
     // Get the camera's direction.
     const projectileDirection = new THREE.Vector3();
-    // Get the camera's direction.
+    // Get the camera's world direction.
     camera.getWorldDirection(projectileDirection);
     // Set the projectile's velocity.
     projectile.velocity = projectileDirection.multiplyScalar(1);
@@ -189,15 +195,10 @@ function animate() {
         velocity.x = direction.x * moveSpeed;
     }
 
-    // Move the player forward/backward based on the camera's direction.
-    camera.position.z += Math.cos(camera.rotation.y) * velocity.z;
-    // Move the player sideways based on the camera's direction.
-    camera.position.x += Math.sin(camera.rotation.y) * velocity.z;
-    // Move the player sideways based on the camera's direction.
-    camera.position.z -= Math.sin(camera.rotation.y) * velocity.x;
-    // Move the player forward/backward based on the camera's direction.
-    camera.position.x += Math.cos(camera.rotation.y) * velocity.x;
-
+    // Move the player forward/backward based on the yaw object's direction.
+    yawObject.translateX(velocity.x);
+    // Move the player forward/backward based on the yaw object's direction.
+    yawObject.translateZ(velocity.z);
 
     // Update the position of each projectile.
     for (let i = projectiles.length - 1; i >= 0; i--) {
