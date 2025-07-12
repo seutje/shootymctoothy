@@ -141,23 +141,20 @@ function hasLineOfSight(start, end) {
     const direction = new THREE.Vector3();
     // Subtract the start position from the end position.
     direction.subVectors(end, start);
-    // Get the distance between the points.
+    // Store the distance between the two points.
     const distance = direction.length();
-    // Normalize the direction for stepping.
+    // Normalize the direction for ray casting.
     direction.normalize();
-    // Create a position vector for stepping through space.
-    const testPos = start.clone();
-    // Step along the line in half unit increments.
-    for (let i = 0; i < distance; i += 0.5) {
-        // Move the test position forward along the line.
-        testPos.addScaledVector(direction, 0.5);
-        // Check if the test position collides with an obstacle.
-        if (collidesWithObstacles(testPos, 0.5)) {
-            // Return false if an obstacle blocks the line of sight.
-            return false;
-        }
+    // Create a raycaster from the start toward the end point.
+    const raycaster = new THREE.Raycaster(start.clone(), direction, 0, distance);
+    // Collect intersections with all obstacle meshes.
+    const intersections = raycaster.intersectObjects(obstacles, false);
+    // Check if the ray hit any obstacle before reaching the end.
+    if (intersections.length > 0) {
+        // Return false if an obstacle blocks the line of sight.
+        return false;
     }
-    // Return true if no obstacles were encountered.
+    // Return true when no obstacles are in the path.
     return true;
 }
 
