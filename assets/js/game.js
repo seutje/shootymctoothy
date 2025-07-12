@@ -266,9 +266,9 @@ const velocity = new THREE.Vector3();
 // Create a new vector to store the player's horizontal velocity.
 const horizontalVelocity = new THREE.Vector3();
 // Define the acceleration added when strafejumping in the air.
-const airAcceleration = 0.02;
+const airAcceleration = 0.1;
 // Define the maximum speed the player can reach while airborne.
-const maxAirSpeed = moveSpeed * 1.5;
+const maxAirSpeed = moveSpeed * 3;
 
 // Define the gravity force applied each frame.
 const gravity = -0.01;
