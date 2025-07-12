@@ -385,7 +385,7 @@ let isMouseDown = false;
 // Store the high-resolution time of the last shot.
 let lastPlayerShotTime = 0;
 // Define the minimum time between shots in milliseconds.
-const playerShotInterval = 200;
+const playerShotInterval = 100;
 
 // Add an event listener for mouse movement to control the camera.
 document.addEventListener('mousemove', onMouseMove, false);
