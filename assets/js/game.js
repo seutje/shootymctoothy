@@ -221,24 +221,14 @@ function updateUIScale() {
 // Call the scale update once at startup.
 updateUIScale();
 
-// Get the pause menu element.
-const pauseMenu = document.getElementById('pauseMenu');
-// Get the restart button element.
-const restartButton = document.getElementById('restartButton');
-// Get the volume slider element.
-const volumeSlider = document.getElementById('volumeSlider');
-// Add a click event listener to the restart button.
-restartButton.addEventListener('click', () => {
-    // Reload the page to restart the game.
-    location.reload();
-});
-// Add an input event listener to the volume slider.
-volumeSlider.addEventListener('input', () => {
-    // Update the volume using the slider value.
-    setVolume(parseFloat(volumeSlider.value));
-});
-// Set the initial volume based on the slider value.
-setVolume(parseFloat(volumeSlider.value));
+// Create an object to store the restart button bounds.
+const restartButtonArea = { x: 0, y: 0, width: 140, height: 30 };
+// Create an object to store the volume slider bounds.
+const volumeSliderArea = { x: 0, y: 0, width: 120, height: 10 };
+// Track the current volume level as a number between zero and one.
+let volumeLevel = 1;
+// Set the starting volume level using the setter function.
+setVolume(volumeLevel);
 
 // Variables for FPS calculation.
 let lastFrameTime = 0;
@@ -300,15 +290,12 @@ function togglePause() {
         stopSoundtrack();
         // Release pointer lock to free the mouse.
         document.exitPointerLock();
-        // Show the pause menu overlay.
-        pauseMenu.style.display = 'flex';
-    } else {
+    }
+    else {
         // Restart the soundtrack.
         startSoundtrack();
         // Request pointer lock again.
         document.body.requestPointerLock();
-        // Hide the pause menu overlay.
-        pauseMenu.style.display = 'none';
     }
 }
 
@@ -381,7 +368,23 @@ function onMouseDown(event) {
     }
     // Do nothing if the game is paused.
     if (gamePaused) {
-        // Exit early because input should be ignored.
+        // Check for clicks on the restart button.
+        if (event.clientX >= restartButtonArea.x && event.clientX <= restartButtonArea.x + restartButtonArea.width && event.clientY >= restartButtonArea.y && event.clientY <= restartButtonArea.y + restartButtonArea.height) {
+            // Reload the page to restart the game.
+            location.reload();
+            // Exit after handling the click.
+            return;
+        }
+        // Check for clicks on the volume slider.
+        if (event.clientX >= volumeSliderArea.x && event.clientX <= volumeSliderArea.x + volumeSliderArea.width && event.clientY >= volumeSliderArea.y - volumeSliderArea.height / 2 && event.clientY <= volumeSliderArea.y + volumeSliderArea.height / 2) {
+            // Calculate the new volume level from the click position.
+            volumeLevel = (event.clientX - volumeSliderArea.x) / volumeSliderArea.width;
+            // Apply the new volume level.
+            setVolume(volumeLevel);
+            // Exit after handling the click.
+            return;
+        }
+        // Exit early because other input should be ignored.
         return;
     }
     // Lock the pointer to the document body.
@@ -750,8 +753,6 @@ function animate(currentTime) {
                 stopSoundtrack();
                 // Release the mouse pointer.
                 document.exitPointerLock();
-                // Hide the pause menu when the game ends.
-                pauseMenu.style.display = 'none';
             }
         }
     }
@@ -828,8 +829,6 @@ loadHighScores();
 
 // Initially pause the game.
 gamePaused = true;
-// Hide the pause menu when the page loads.
-pauseMenu.style.display = 'none';
 
 // Function to start the game.
 function startGame() {
@@ -841,8 +840,7 @@ function startGame() {
     startSoundtrack();
     // Request pointer lock.
     document.body.requestPointerLock();
-    // Hide the pause menu when the game starts.
-    pauseMenu.style.display = 'none';
+
 
     // Reset enemy shot timers.
     enemies.forEach(enemy => {
