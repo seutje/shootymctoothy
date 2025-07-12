@@ -101,8 +101,8 @@ function drawUI() {
         // Draw the start prompt.
         uiContext.fillText('Click to start', uiCanvas.width / 2 - 70, uiCanvas.height / 2 + 20);
     }
-    // Check if the game is over.
-    if (gameOver) {
+    // Check if the game is over while not in autoplay mode.
+    if (gameOver && !autoplay) {
         // Set a translucent background color.
         uiContext.fillStyle = 'rgba(0,0,0,0.8)';
         // Draw the background rectangle with extra height.

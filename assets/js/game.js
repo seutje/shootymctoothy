@@ -941,14 +941,28 @@ function animate(currentTime) {
                         saveHighScores();
                     }
                 }
-                // Stop the animation loop.
-                gamePaused = true;
-                // Indicate that the game has ended.
-                gameOver = true;
-                // Stop the soundtrack when the game ends.
-                stopSoundtrack();
-                // Release the mouse pointer.
-                document.exitPointerLock();
+                // Check if autoplay mode is active.
+                if (autoplay) {
+                    // Reset the player health for a fresh demo.
+                    health = 100;
+                    // Reset the score for a clean slate.
+                    score = 0;
+                    // Reset the kill count for consistency.
+                    killCount = 0;
+                    // Restart the autoplay demo.
+                    startAutoplay();
+                    // Clear the game over flag so the overlay does not show.
+                    gameOver = false;
+                } else {
+                    // Stop the animation loop when the player dies.
+                    gamePaused = true;
+                    // Indicate that the game has ended.
+                    gameOver = true;
+                    // Stop the soundtrack when the game ends.
+                    stopSoundtrack();
+                    // Release the mouse pointer.
+                    document.exitPointerLock();
+                }
             }
         }
     }
