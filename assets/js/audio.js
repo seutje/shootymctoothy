@@ -109,30 +109,26 @@ function playHiHat() {
 
 // The function to play the shooting sound effect.
 function playShootSound() {
-    // Create an oscillator for the laser sound.
+    // Create an oscillator for the weapon blip.
     const oscillator = audioContext.createOscillator();
-    // Set the oscillator type to square for a bright tone.
+    // Use a square wave for a sharp tone.
     oscillator.type = 'square';
-    // Create a gain node to control the volume envelope.
+    // Create a gain node to shape the volume envelope.
     const gainNode = audioContext.createGain();
-    // Start the frequency high for the initial pitch.
-    oscillator.frequency.setValueAtTime(1200, audioContext.currentTime);
-    // Sweep the frequency down for a laser effect.
-    oscillator.frequency.exponentialRampToValueAtTime(400, audioContext.currentTime + 0.2);
-    // Set the starting gain so the sound is audible.
-    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-    // Fade the gain quickly to create a short pulse.
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+    // Set the oscillator frequency to a high pitch.
+    oscillator.frequency.setValueAtTime(1500, audioContext.currentTime);
+    // Start the gain at a noticeable volume level.
+    gainNode.gain.setValueAtTime(0.4, audioContext.currentTime);
+    // Fade the gain rapidly for a short sound.
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.05);
     // Connect the oscillator to the gain node.
     oscillator.connect(gainNode);
-    // Connect the gain node to the reverb effect.
-    gainNode.connect(reverbNode);
-    // Connect the reverb node to the master volume control.
-    reverbNode.connect(masterGain);
+    // Connect the gain node directly to the master volume control.
+    gainNode.connect(masterGain);
     // Start the oscillator immediately.
     oscillator.start();
-    // Stop the oscillator after 0.2 seconds.
-    oscillator.stop(audioContext.currentTime + 0.2);
+    // Stop the oscillator after a brief moment.
+    oscillator.stop(audioContext.currentTime + 0.05);
 }
 
 // The function to play the jump sound effect.
