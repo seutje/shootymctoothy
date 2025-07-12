@@ -124,6 +124,27 @@ rocketGroup.visible = false;
 // Attach the rocket launcher group to the camera.
 camera.add(rocketGroup);
 
+// Create a group to hold the lightning gun parts.
+const lightningGroup = new THREE.Group();
+// Position the lightning gun using the same base offset.
+lightningGroup.position.copy(gunBasePosition);
+// Create a cylinder geometry for the lightning barrel.
+const lightningBarrelGeometry = new THREE.CylinderGeometry(0.05, 0.05, 1, 16);
+// Create a blue material for the lightning gun meshes.
+const lightningMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff });
+// Create a mesh for the lightning barrel.
+const lightningBarrelMesh = new THREE.Mesh(lightningBarrelGeometry, lightningMaterial);
+// Rotate the barrel so it points forward.
+lightningBarrelMesh.rotation.x = Math.PI / 2;
+// Position the lightning barrel in front of the camera.
+lightningBarrelMesh.position.set(0.2, -0.2, -0.5);
+// Add the barrel mesh to the lightning gun group.
+lightningGroup.add(lightningBarrelMesh);
+// Hide the lightning gun until selected.
+lightningGroup.visible = false;
+// Attach the lightning gun group to the camera.
+camera.add(lightningGroup);
+
 // Store the world width for obstacle placement calculations.
 const worldWidth = 500;
 // Store the world depth for obstacle placement calculations.
@@ -253,6 +274,8 @@ const projectiles = [];
 const enemyProjectiles = [];
 // Create an array to store explosion meshes.
 const explosions = [];
+// Create an array to store lightning beam meshes.
+const lightningBeams = [];
 
 // Create a texture object that will hold the enemy texture.
 const enemyTexture = new THREE.Texture();
@@ -415,6 +438,10 @@ let playerShotInterval = 100;
 const gunShotInterval = 100;
 // Constant interval for the rocket launcher.
 const rocketShotInterval = 800;
+// Constant interval for the lightning gun.
+const lightningShotInterval = 300;
+// Define the maximum range of the lightning gun.
+const lightningRange = 100;
 // Define how far the gun moves up and down when bobbing.
 const gunBobAmplitude = 0.05;
 // Define how quickly the bobbing motion slows down.
@@ -606,14 +633,25 @@ function onWindowResize() {
 function onMouseWheel(event) {
     // Swap weapons when the wheel moves up or down.
     if (event.deltaY !== 0) {
-        // Toggle the current weapon index between zero and one.
-        currentWeapon = currentWeapon === 0 ? 1 : 0;
+        // Advance the weapon index cycling through three weapons.
+        currentWeapon = (currentWeapon + 1) % 3;
         // Set the interval based on the selected weapon.
-        playerShotInterval = currentWeapon === 0 ? gunShotInterval : rocketShotInterval;
+        if (currentWeapon === 0) {
+            // Use the basic gun interval when index is zero.
+            playerShotInterval = gunShotInterval;
+        } else if (currentWeapon === 1) {
+            // Use the rocket interval when index is one.
+            playerShotInterval = rocketShotInterval;
+        } else {
+            // Use the lightning interval when index is two.
+            playerShotInterval = lightningShotInterval;
+        }
         // Show the gun model when using the basic weapon.
         gunGroup.visible = currentWeapon === 0;
         // Show the rocket launcher model when selected.
         rocketGroup.visible = currentWeapon === 1;
+        // Show the lightning gun model when selected.
+        lightningGroup.visible = currentWeapon === 2;
     }
 }
 
@@ -649,6 +687,63 @@ function createProjectile() {
         scene.add(rocket);
         // Add the rocket to the projectiles array.
         projectiles.push(rocket);
+    } else if (currentWeapon === 2) {
+        // Create a vector storing the muzzle position for the ray start.
+        const start = new THREE.Vector3();
+        // Get the world position of the lightning barrel.
+        lightningBarrelMesh.getWorldPosition(start);
+        // Create a vector storing the forward direction.
+        const dir = new THREE.Vector3();
+        // Get the camera's forward direction.
+        camera.getWorldDirection(dir);
+        // Create a raycaster for the hitscan attack.
+        const raycaster = new THREE.Raycaster(start, dir, 0, lightningRange);
+        // Find enemy objects intersected by the ray.
+        const hits = raycaster.intersectObjects(enemies, false);
+        // Check if an enemy was hit by the lightning.
+        if (hits.length > 0) {
+            // Get the first enemy that was hit.
+            const enemy = hits[0].object;
+            // Store the enemy position for item drops.
+            const dropPos = enemy.position.clone();
+            // Respawn the enemy at a new location.
+            const respawn = findEnemySpawnPosition();
+            // Set the enemy's x position.
+            enemy.position.x = respawn.x;
+            // Set the enemy's z position.
+            enemy.position.z = respawn.z;
+            // Set the enemy's y position.
+            enemy.position.y = respawn.y;
+            // Increase the score for the kill.
+            score += 10;
+            // Increase the kill count.
+            killCount++;
+            // Drop a health pack every three kills.
+            if (killCount % 3 === 0) {
+                // Create a health pack at the drop position.
+                createHealthPack(dropPos);
+            }
+        }
+        // Create a cylinder geometry for the lightning beam visual.
+        const beamGeometry = new THREE.CylinderGeometry(0.05, 0.05, lightningRange, 8);
+        // Create a blue material for the beam.
+        const beamMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff });
+        // Create the beam mesh from the geometry and material.
+        const beam = new THREE.Mesh(beamGeometry, beamMaterial);
+        // Create a quaternion to align the beam with the direction.
+        const beamQuaternion = new THREE.Quaternion();
+        // Calculate the rotation from the y axis to the firing direction.
+        beamQuaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize());
+        // Apply the calculated rotation to the beam mesh.
+        beam.quaternion.copy(beamQuaternion);
+        // Position the beam half way along its length in front of the player.
+        beam.position.copy(start.clone().add(dir.clone().multiplyScalar(lightningRange / 2)));
+        // Record the spawn time for removal.
+        beam.spawnTime = Date.now();
+        // Add the beam to the scene for a brief flash.
+        scene.add(beam);
+        // Add the beam to the lightning beams array.
+        lightningBeams.push(beam);
     } else {
         // Create a small box geometry for the bullet.
         const projectileGeometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
@@ -1327,6 +1422,19 @@ function animate(currentTime) {
         }
     }
 
+    // Update each lightning beam and remove old ones.
+    for (let i = lightningBeams.length - 1; i >= 0; i--) {
+        // Get the current lightning beam.
+        const beam = lightningBeams[i];
+        // Remove the beam after one tenth of a second.
+        if (Date.now() - beam.spawnTime > 100) {
+            // Remove the beam mesh from the scene.
+            scene.remove(beam);
+            // Remove the beam from the array.
+            lightningBeams.splice(i, 1);
+        }
+    }
+
     // Update the position of each health pack.
     for (let i = healthPacks.length - 1; i >= 0; i--) {
         // Get the current health pack.
@@ -1490,6 +1598,13 @@ function resetGameState() {
     });
     // Clear the health packs array.
     healthPacks.length = 0;
+    // Remove any lightning beams from the scene.
+    lightningBeams.forEach(beam => {
+        // Remove the beam mesh from the scene graph.
+        scene.remove(beam);
+    });
+    // Clear the lightning beams array.
+    lightningBeams.length = 0;
     // Reset to the basic gun weapon.
     currentWeapon = 0;
     // Set the shot interval for the gun.
@@ -1497,6 +1612,8 @@ function resetGameState() {
     // Show the gun model and hide the rocket launcher.
     gunGroup.visible = true;
     rocketGroup.visible = false;
+    // Hide the lightning gun model as well.
+    lightningGroup.visible = false;
     // Reset the game start time for spawn scaling.
     gameStartTime = Date.now();
     // Reset the spawn check timer.
