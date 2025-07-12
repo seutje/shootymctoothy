@@ -629,6 +629,8 @@ function createProjectile() {
         const rocket = new THREE.Mesh(rocketGeometry, rocketMaterialMesh);
         // Set the rocket position to the camera position.
         camera.getWorldPosition(rocket.position);
+        // Store the rocket spawn position for distance checks.
+        rocket.spawnPosition = rocket.position.clone();
         // Create a vector to store the direction of the rocket.
         const rocketDirection = new THREE.Vector3();
         // Get the forward direction from the camera.
@@ -656,6 +658,8 @@ function createProjectile() {
         const projectile = new THREE.Mesh(projectileGeometry, projectileMaterial);
         // Set the bullet position to the camera position.
         camera.getWorldPosition(projectile.position);
+        // Store the bullet spawn position for distance checks.
+        projectile.spawnPosition = projectile.position.clone();
         // Get the camera direction.
         const projectileDirection = new THREE.Vector3();
         // Get the forward direction from the camera.
@@ -686,6 +690,8 @@ function createEnemyProjectile(enemy) {
     const projectile = new THREE.Mesh(projectileGeometry, projectileMaterial);
     // Set the projectile's initial position to the enemy's position.
     projectile.position.copy(enemy.position);
+    // Store the projectile spawn position for distance checks.
+    projectile.spawnPosition = projectile.position.clone();
     // Get the direction from the enemy to the player.
     const directionToPlayer = new THREE.Vector3();
     // Subtract the enemy position from the player position.
@@ -1078,6 +1084,15 @@ function animate(currentTime) {
         const projectile = projectiles[i];
         // Update the projectile's position based on its velocity.
         projectile.position.add(projectile.velocity);
+        // Remove the projectile if it travels too far from its spawn position.
+        if (projectile.position.distanceTo(projectile.spawnPosition) > 100) {
+            // Remove the projectile mesh from the scene.
+            scene.remove(projectile);
+            // Remove the projectile from the projectiles array.
+            projectiles.splice(i, 1);
+            // Continue to the next projectile.
+            continue;
+        }
         // Check if the projectile is a rocket.
         if (projectile.isRocket) {
             // Track whether the rocket should explode.
@@ -1199,6 +1214,15 @@ function animate(currentTime) {
         const projectile = enemyProjectiles[i];
         // Update the projectile's position based on its velocity.
         projectile.position.add(projectile.velocity);
+        // Remove the projectile if it travels too far from its spawn position.
+        if (projectile.position.distanceTo(projectile.spawnPosition) > 100) {
+            // Remove the projectile mesh from the scene.
+            scene.remove(projectile);
+            // Remove the projectile from the enemy projectiles array.
+            enemyProjectiles.splice(i, 1);
+            // Continue to the next projectile.
+            continue;
+        }
         // Remove the projectile if it hits an obstacle.
         if (collidesWithObstacles(projectile.position, 0.5)) {
             // Remove the projectile mesh from the scene.
