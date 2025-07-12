@@ -71,6 +71,10 @@ function drawUI() {
         volumeSliderArea.x = uiCanvas.width / 2 - volumeSliderArea.width / 2;
         // Update the slider y coordinate.
         volumeSliderArea.y = uiCanvas.height / 2 + 70;
+        // Set the text color for the volume label.
+        uiContext.fillStyle = 'white';
+        // Draw the volume label next to the slider.
+        uiContext.fillText('Volume', volumeSliderArea.x - 70, volumeSliderArea.y + 5);
         // Set the color for the slider track.
         uiContext.fillStyle = 'gray';
         // Draw the slider track.
