@@ -8,6 +8,8 @@ let aiShootTime = 0;
 let currentAIDirection = null;
 // Store the projectile speed used for leading targets.
 const projectileSpeed = 1;
+// Store the smoothing factor for AI mouse movement.
+const rotationSmoothing = 0.1;
 
 // Function to find the closest visible health pack.
 function findVisibleHealthPack() {
@@ -119,14 +121,18 @@ function updateAutoplayAI(currentTime) {
         const predicted = target.position.clone().add(target.velocity.clone().multiplyScalar(travelTime));
         // Subtract the player position from the predicted position.
         dir.subVectors(predicted, yawObject.position);
-        // Rotate the player to face the predicted position.
-        yawObject.rotation.y = Math.atan2(-dir.x, -dir.z);
+        // Calculate the desired yaw to face the predicted position.
+        const desiredYaw = Math.atan2(-dir.x, -dir.z);
+        // Smoothly rotate the player toward the desired yaw.
+        yawObject.rotation.y += (desiredYaw - yawObject.rotation.y) * rotationSmoothing;
         // Calculate the horizontal distance to the predicted position.
         const horiz = Math.sqrt(dir.x * dir.x + dir.z * dir.z);
-        // Calculate the pitch angle toward the predicted position.
-        const pitch = Math.atan2(predicted.y - yawObject.position.y, horiz);
-        // Set the camera vertical rotation using the pitch value.
-        camera.rotation.x = pitch;
+        // Calculate the desired pitch toward the predicted position.
+        const desiredPitch = Math.atan2(predicted.y - yawObject.position.y, horiz);
+        // Smoothly rotate the camera toward the desired pitch.
+        camera.rotation.x += (desiredPitch - camera.rotation.x) * rotationSmoothing;
+        // Clamp the camera pitch to prevent flipping.
+        camera.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, camera.rotation.x));
         // Fire a shot periodically when there is a clear path.
         if (currentTime > aiShootTime) {
             // Check if the player can see the predicted position without obstacles.
