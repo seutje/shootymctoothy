@@ -821,6 +821,8 @@ function animate(currentTime) {
             healthPacks.splice(i, 1);
             // Restore the player's health by fifty points.
             health = Math.min(health + 50, 100);
+            // Play the health pack pickup sound effect.
+            playHealthPackSound();
             // Continue to the next pack.
             continue;
         }
