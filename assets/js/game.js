@@ -744,8 +744,8 @@ function createHealthPack(position) {
 
 // Function to handle rocket explosions at a position.
 function explodeRocket(position) {
-    // Create a small sphere geometry for the explosion effect.
-    const explosionGeometry = new THREE.SphereGeometry(1, 8, 8);
+    // Create a larger sphere geometry for the explosion effect.
+    const explosionGeometry = new THREE.SphereGeometry(2, 8, 8);
     // Create an orange material for the explosion.
     const explosionMaterial = new THREE.MeshBasicMaterial({ color: 0xffaa00 });
     // Create a mesh from the geometry and material.
@@ -762,8 +762,8 @@ function explodeRocket(position) {
     for (let i = enemies.length - 1; i >= 0; i--) {
         // Get the current enemy.
         const enemy = enemies[i];
-        // Check if the enemy is within three units of the explosion.
-        if (enemy.position.distanceTo(position) < 3) {
+        // Check if the enemy is within six units of the explosion.
+        if (enemy.position.distanceTo(position) < 6) {
             // Store the enemy position for item drops.
             const dropPos = enemy.position.clone();
             // Respawn the enemy at a new location.
@@ -786,7 +786,7 @@ function explodeRocket(position) {
         }
     }
     // Apply splash damage to the player.
-    if (yawObject.position.distanceTo(position) < 3) {
+    if (yawObject.position.distanceTo(position) < 6) {
         // Reduce the player's health by twenty without going negative.
         health = Math.max(health - 20, 0);
     }
