@@ -9,10 +9,52 @@ let currentAIDirection = null;
 // Store the projectile speed used for leading targets.
 const projectileSpeed = 1;
 
+// Function to find the closest visible health pack.
+function findVisibleHealthPack() {
+    // Initialize the closest pack variable.
+    let closest = null;
+    // Set the minimum distance to a large value.
+    let minDist = Infinity;
+    // Iterate over each health pack.
+    healthPacks.forEach(pack => {
+        // Check if the pack is visible to the player.
+        if (hasLineOfSight(yawObject.position, pack.position)) {
+            // Calculate the distance to this pack.
+            const dist = yawObject.position.distanceTo(pack.position);
+            // Update the closest pack if this one is nearer.
+            if (dist < minDist) {
+                // Set the minimum distance to this pack's distance.
+                minDist = dist;
+                // Store this pack as the closest.
+                closest = pack;
+            }
+        }
+    });
+    // Return the closest visible pack or null.
+    return closest;
+}
+
 // Function to update the autoplay AI each frame.
 function updateAutoplayAI(currentTime) {
-    // Change the movement direction periodically.
-    if (currentTime > aiDirectionChangeTime) {
+    // Find the closest visible health pack if any.
+    const pack = findVisibleHealthPack();
+    // Check if a pack was found.
+    if (pack) {
+        // Calculate the difference on the x axis.
+        const dx = pack.position.x - yawObject.position.x;
+        // Calculate the difference on the z axis.
+        const dz = pack.position.z - yawObject.position.z;
+        // Decide whether horizontal or depth movement is greater.
+        if (Math.abs(dx) > Math.abs(dz)) {
+            // Move right if the pack is to the right.
+            currentAIDirection = dx > 0 ? 'd' : 'a';
+        } else {
+            // Move forward if the pack is ahead.
+            currentAIDirection = dz > 0 ? 's' : 'w';
+        }
+        // Update the time before another direction change.
+        aiDirectionChangeTime = currentTime + 500;
+    } else if (currentTime > aiDirectionChangeTime) {
         // Possible movement choices for the AI.
         const dirs = ['w', 'a', 's', 'd', null];
         // Select a random direction from the choices.
