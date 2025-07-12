@@ -57,8 +57,8 @@ function updateAutoplayAI(currentTime) {
         // Update the time before another direction change.
         aiDirectionChangeTime = currentTime + 500;
     } else if (currentTime > aiDirectionChangeTime) {
-        // Possible movement choices for the AI.
-        const dirs = ['w', 'a', 's', 'd', null];
+        // Possible movement choices for the AI that avoid standing still.
+        const dirs = ['w', 'a', 's', 'd'];
         // Select a random direction from the choices.
         currentAIDirection = dirs[Math.floor(Math.random() * dirs.length)];
         // Schedule the next direction change after one second.
@@ -144,8 +144,8 @@ function updateAutoplayAI(currentTime) {
             aiShootTime = currentTime + 500;
         }
     }
-    // Randomly jump if on the ground.
-    if (Math.random() < 0.01 && isGrounded) {
+    // Randomly jump if on the ground with higher frequency.
+    if (Math.random() < 0.05 && isGrounded) {
         // Set the vertical velocity for a jump.
         verticalVelocity = jumpSpeed;
         // Mark the player as not grounded.
