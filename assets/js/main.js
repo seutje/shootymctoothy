@@ -226,7 +226,7 @@ let lastFrameTime = 0;
 let frameCount = 0;
 let fps = 0;
 // Variable to store the last time the UI was updated.
-let lastUIUpdate = -1000;
+let lastUIUpdate = -200;
 
 // Variable to track if the game is paused.
 let gamePaused = false;
@@ -730,8 +730,8 @@ function animate(currentTime) {
     if (gamePaused) {
         // Render the scene without updates.
         renderer.render(scene, camera);
-        // Check if one second has passed since the last UI update.
-        if (currentTime - lastUIUpdate >= 1000) {
+        // Check if two hundred milliseconds have passed since the last UI update.
+        if (currentTime - lastUIUpdate >= 200) {
             // Record the time of this UI update.
             lastUIUpdate = currentTime;
             // Draw the UI overlay.
@@ -954,8 +954,8 @@ function animate(currentTime) {
 
     // Render the scene from the camera's perspective.
     renderer.render(scene, camera);
-    // Update the UI only once per second.
-    if (currentTime - lastUIUpdate >= 1000) {
+    // Update the UI only once every two hundred milliseconds.
+    if (currentTime - lastUIUpdate >= 200) {
         // Record the time of this UI update.
         lastUIUpdate = currentTime;
         // Draw the UI overlay.
