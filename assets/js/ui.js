@@ -43,18 +43,46 @@ function drawUI() {
     if (gamePaused && gameStarted && !gameOver) {
         // Set a translucent background color.
         uiContext.fillStyle = 'rgba(0,0,0,0.5)';
-        // Draw the background rectangle.
-        uiContext.fillRect(uiCanvas.width / 2 - 100, uiCanvas.height / 2 - 50, 200, 100);
+        // Draw the background rectangle for the pause menu.
+        uiContext.fillRect(uiCanvas.width / 2 - 150, uiCanvas.height / 2 - 100, 300, 200);
         // Set the text color for the pause message.
         uiContext.fillStyle = 'white';
         // Set the large font for the pause header.
         uiContext.font = '30px sans-serif';
         // Draw the pause header.
-        uiContext.fillText('Paused', uiCanvas.width / 2 - 50, uiCanvas.height / 2 - 10);
+        uiContext.fillText('Paused', uiCanvas.width / 2 - 50, uiCanvas.height / 2 - 60);
         // Set the font for the resume prompt.
         uiContext.font = '20px sans-serif';
         // Draw the resume prompt.
-        uiContext.fillText('Press P to resume', uiCanvas.width / 2 - 90, uiCanvas.height / 2 + 30);
+        uiContext.fillText('Press P or Esc to resume', uiCanvas.width / 2 - 120, uiCanvas.height / 2 - 30);
+        // Update the restart button x coordinate.
+        restartButtonArea.x = uiCanvas.width / 2 - 70;
+        // Update the restart button y coordinate.
+        restartButtonArea.y = uiCanvas.height / 2;
+        // Set a gray color for the button background.
+        uiContext.fillStyle = 'gray';
+        // Draw the restart button rectangle.
+        uiContext.fillRect(restartButtonArea.x, restartButtonArea.y, restartButtonArea.width, restartButtonArea.height);
+        // Set the text color for the button label.
+        uiContext.fillStyle = 'white';
+        // Draw the restart button label.
+        uiContext.fillText('Restart', restartButtonArea.x + 20, restartButtonArea.y + 20);
+        // Update the slider x coordinate.
+        volumeSliderArea.x = uiCanvas.width / 2 - volumeSliderArea.width / 2;
+        // Update the slider y coordinate.
+        volumeSliderArea.y = uiCanvas.height / 2 + 70;
+        // Set the text color for the volume label.
+        uiContext.fillStyle = 'white';
+        // Draw the volume label next to the slider.
+        uiContext.fillText('Volume', volumeSliderArea.x - 70, volumeSliderArea.y + 5);
+        // Set the color for the slider track.
+        uiContext.fillStyle = 'gray';
+        // Draw the slider track.
+        uiContext.fillRect(volumeSliderArea.x, volumeSliderArea.y - 2, volumeSliderArea.width, 4);
+        // Set the color for the slider handle.
+        uiContext.fillStyle = 'white';
+        // Draw the slider handle at the current volume level.
+        uiContext.fillRect(volumeSliderArea.x + volumeSliderArea.width * volumeLevel - 5, volumeSliderArea.y - 5, 10, 10);
     }
     // Check if the game has not started.
     if (!gameStarted && !gameOver) {

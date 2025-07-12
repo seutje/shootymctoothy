@@ -1,5 +1,11 @@
 // Create a new AudioContext for the soundtrack.
 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+// Create a gain node to control overall volume.
+const masterGain = audioContext.createGain();
+// Connect the master gain to the audio destination.
+masterGain.connect(audioContext.destination);
+// Set the initial master volume to full volume.
+masterGain.gain.value = 1;
 // Create a noise buffer for the hi-hats.
 const noiseBuffer = audioContext.createBuffer(1, audioContext.sampleRate, audioContext.sampleRate);
 // Get the data array from the noise buffer.
@@ -37,8 +43,8 @@ function playNote(frequency, duration) {
     gainNode.gain.value = 0.1;
     // Connect the oscillator to the gain node.
     oscillator.connect(gainNode);
-    // Connect the gain node to the destination.
-    gainNode.connect(audioContext.destination);
+    // Connect the gain node to the master volume control.
+    gainNode.connect(masterGain);
     // Start the oscillator.
     oscillator.start();
     // Stop the oscillator after the given duration.
@@ -55,8 +61,8 @@ function playKick() {
     oscillator.type = 'sine';
     // Connect the oscillator to the gain node.
     oscillator.connect(gainNode);
-    // Connect the gain node to the destination.
-    gainNode.connect(audioContext.destination);
+    // Connect the gain node to the master volume control.
+    gainNode.connect(masterGain);
     // Set the initial frequency of the kick.
     oscillator.frequency.setValueAtTime(150, audioContext.currentTime);
     // Ramp the frequency down for the thump effect.
@@ -93,8 +99,8 @@ function playHiHat() {
     noiseSource.connect(filter);
     // Connect the filter to the gain node.
     filter.connect(gainNode);
-    // Connect the gain node to the destination.
-    gainNode.connect(audioContext.destination);
+    // Connect the gain node to the master volume control.
+    gainNode.connect(masterGain);
     // Start the noise source.
     noiseSource.start();
     // Stop the noise source after a short time.
@@ -121,8 +127,8 @@ function playShootSound() {
     oscillator.connect(gainNode);
     // Connect the gain node to the reverb effect.
     gainNode.connect(reverbNode);
-    // Connect the reverb node to the destination.
-    reverbNode.connect(audioContext.destination);
+    // Connect the reverb node to the master volume control.
+    reverbNode.connect(masterGain);
     // Start the oscillator immediately.
     oscillator.start();
     // Stop the oscillator after 0.2 seconds.
@@ -195,4 +201,12 @@ function startSoundtrack() {
 function stopSoundtrack() {
     // Clear the interval to stop the riff.
     clearInterval(soundtrackInterval);
+}
+
+// The function to set the master volume.
+function setVolume(level) {
+    // Clamp the level between zero and one.
+    const volume = Math.max(0, Math.min(1, level));
+    // Set the gain value on the master node.
+    masterGain.gain.value = volume;
 }

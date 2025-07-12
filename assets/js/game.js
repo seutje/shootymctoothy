@@ -221,6 +221,17 @@ function updateUIScale() {
 // Call the scale update once at startup.
 updateUIScale();
 
+// Create an object to store the restart button bounds.
+const restartButtonArea = { x: 0, y: 0, width: 140, height: 30 };
+// Create an object to store the volume slider bounds.
+const volumeSliderArea = { x: 0, y: 0, width: 120, height: 10 };
+// Load the stored volume value from local storage if available.
+const storedVolume = localStorage.getItem('shootyVolume');
+// Track the current volume level as a number between zero and one.
+let volumeLevel = storedVolume !== null ? parseFloat(storedVolume) : 1;
+// Set the starting volume level using the setter function.
+setVolume(volumeLevel);
+
 // Variables for FPS calculation.
 let lastFrameTime = 0;
 let frameCount = 0;
@@ -271,6 +282,25 @@ window.addEventListener('resize', onWindowResize, false);
 // A map to store the state of the keys.
 const keys = {};
 
+// Function to toggle the paused state.
+function togglePause() {
+    // Invert the paused flag.
+    gamePaused = !gamePaused;
+    // Check if the game is now paused.
+    if (gamePaused) {
+        // Stop the soundtrack loop.
+        stopSoundtrack();
+        // Release pointer lock to free the mouse.
+        document.exitPointerLock();
+    }
+    else {
+        // Restart the soundtrack.
+        startSoundtrack();
+        // Request pointer lock again.
+        document.body.requestPointerLock();
+    }
+}
+
 // The function to handle keydown events.
 function onKeyDown(event) {
     // Set the key state to true.
@@ -289,20 +319,16 @@ function onKeyDown(event) {
     if (event.key.toLowerCase() === 'p') {
         // Ensure the game is in progress before toggling pause.
         if (gameStarted && !gameOver) {
-            // Toggle the paused state.
-            gamePaused = !gamePaused;
-            // Stop the soundtrack when pausing.
-            if (gamePaused) {
-                // Stop the soundtrack loop.
-                stopSoundtrack();
-                // Release pointer lock so the mouse can move freely.
-                document.exitPointerLock();
-            } else {
-                // Restart the soundtrack when resuming.
-                startSoundtrack();
-                // Request pointer lock to regain mouse control.
-                document.body.requestPointerLock();
-            }
+            // Call the pause toggle function.
+            togglePause();
+        }
+    }
+    // Check if the escape key was pressed.
+    if (event.key === 'Escape') {
+        // Ensure the game is in progress before toggling pause.
+        if (gameStarted && !gameOver) {
+            // Call the pause toggle function.
+            togglePause();
         }
     }
 }
@@ -344,7 +370,25 @@ function onMouseDown(event) {
     }
     // Do nothing if the game is paused.
     if (gamePaused) {
-        // Exit early because input should be ignored.
+        // Check for clicks on the restart button.
+        if (event.clientX >= restartButtonArea.x && event.clientX <= restartButtonArea.x + restartButtonArea.width && event.clientY >= restartButtonArea.y && event.clientY <= restartButtonArea.y + restartButtonArea.height) {
+            // Reload the page to restart the game.
+            location.reload();
+            // Exit after handling the click.
+            return;
+        }
+        // Check for clicks on the volume slider.
+        if (event.clientX >= volumeSliderArea.x && event.clientX <= volumeSliderArea.x + volumeSliderArea.width && event.clientY >= volumeSliderArea.y - volumeSliderArea.height / 2 && event.clientY <= volumeSliderArea.y + volumeSliderArea.height / 2) {
+            // Calculate the new volume level from the click position.
+            volumeLevel = (event.clientX - volumeSliderArea.x) / volumeSliderArea.width;
+            // Apply the new volume level.
+            setVolume(volumeLevel);
+            // Store the new volume level in local storage.
+            localStorage.setItem('shootyVolume', volumeLevel);
+            // Exit after handling the click.
+            return;
+        }
+        // Exit early because other input should be ignored.
         return;
     }
     // Lock the pointer to the document body.
@@ -800,6 +844,7 @@ function startGame() {
     startSoundtrack();
     // Request pointer lock.
     document.body.requestPointerLock();
+
 
     // Reset enemy shot timers.
     enemies.forEach(enemy => {
