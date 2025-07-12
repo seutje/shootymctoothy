@@ -135,6 +135,32 @@ function collidesWithObstacles(position, radius) {
     return false;
 }
 
+// Function to check if there is a clear path between two points.
+function hasLineOfSight(start, end) {
+    // Create a vector from start to end.
+    const direction = new THREE.Vector3();
+    // Subtract the start position from the end position.
+    direction.subVectors(end, start);
+    // Get the distance between the points.
+    const distance = direction.length();
+    // Normalize the direction for stepping.
+    direction.normalize();
+    // Create a position vector for stepping through space.
+    const testPos = start.clone();
+    // Step along the line in half unit increments.
+    for (let i = 0; i < distance; i += 0.5) {
+        // Move the test position forward along the line.
+        testPos.addScaledVector(direction, 0.5);
+        // Check if the test position collides with an obstacle.
+        if (collidesWithObstacles(testPos, 0.5)) {
+            // Return false if an obstacle blocks the line of sight.
+            return false;
+        }
+    }
+    // Return true if no obstacles were encountered.
+    return true;
+}
+
 // Create an array to store enemy objects.
 const enemies = [];
 // Create an array to store projectile objects.
@@ -651,10 +677,13 @@ function updateAutoplayAI(currentTime) {
         dir.subVectors(target.position, yawObject.position);
         // Rotate the player to face the target.
         yawObject.rotation.y = Math.atan2(-dir.x, -dir.z);
-        // Fire a shot periodically.
+        // Fire a shot periodically when there is a clear path.
         if (currentTime > aiShootTime) {
-            // Create a projectile towards the target.
-            createProjectile();
+            // Check if the player can see the target without obstacles.
+            if (hasLineOfSight(yawObject.position, target.position)) {
+                // Create a projectile towards the target.
+                createProjectile();
+            }
             // Schedule the next shot after half a second.
             aiShootTime = currentTime + 500;
         }
@@ -894,20 +923,23 @@ function animate(currentTime) {
             }
             // Check if player is dead.
             if (health <= 0) {
-                // Determine if the current score qualifies for the high score list.
-                const qualifies = highScores.length < MAX_HIGH_SCORES || score > Math.min(...highScores.map(entry => entry.score));
-                // Check if the score qualifies for the top five.
-                if (qualifies) {
-                    // Prompt the player for their name or use a default value.
-                    const playerName = prompt('Enter your name:', DEFAULT_PLAYER_NAME) || DEFAULT_PLAYER_NAME;
-                    // Add the new score to the high scores array.
-                    highScores.push({ name: playerName, score: score });
-                    // Sort high scores in descending order.
-                    highScores.sort((a, b) => b.score - a.score);
-                    // Keep only the top 5 scores.
-                    highScores = highScores.slice(0, MAX_HIGH_SCORES);
-                    // Save high scores to local storage.
-                    saveHighScores();
+                // Only record high scores when not in autoplay mode.
+                if (!autoplay) {
+                    // Determine if the current score qualifies for the high score list.
+                    const qualifies = highScores.length < MAX_HIGH_SCORES || score > Math.min(...highScores.map(entry => entry.score));
+                    // Check if the score qualifies for the top five.
+                    if (qualifies) {
+                        // Prompt the player for their name or use a default value.
+                        const playerName = prompt('Enter your name:', DEFAULT_PLAYER_NAME) || DEFAULT_PLAYER_NAME;
+                        // Add the new score to the high scores array.
+                        highScores.push({ name: playerName, score: score });
+                        // Sort high scores in descending order.
+                        highScores.sort((a, b) => b.score - a.score);
+                        // Keep only the top 5 scores.
+                        highScores = highScores.slice(0, MAX_HIGH_SCORES);
+                        // Save high scores to local storage.
+                        saveHighScores();
+                    }
                 }
                 // Stop the animation loop.
                 gamePaused = true;
