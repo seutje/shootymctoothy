@@ -702,19 +702,35 @@ function createEnemyProjectile(enemy) {
 
 // Function to create a health pack at a given position.
 function createHealthPack(position) {
-    // Create a sphere geometry for the health pack.
-    const packGeometry = new THREE.SphereGeometry(0.5, 16, 16);
-    // Create a red material for the health pack.
-    const packMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-    // Create a mesh from the geometry and material.
-    const pack = new THREE.Mesh(packGeometry, packMaterial);
+    // Create a group to hold the cross bars.
+    const pack = new THREE.Group();
+    // Create a green material for the health pack.
+    const packMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+    // Create a box geometry for the x axis bar.
+    const barXGeometry = new THREE.BoxGeometry(0.8, 0.2, 0.2);
+    // Create a mesh for the x axis bar.
+    const barXMesh = new THREE.Mesh(barXGeometry, packMaterial);
+    // Add the x axis bar mesh to the group.
+    pack.add(barXMesh);
+    // Create a box geometry for the y axis bar.
+    const barYGeometry = new THREE.BoxGeometry(0.2, 0.8, 0.2);
+    // Create a mesh for the y axis bar.
+    const barYMesh = new THREE.Mesh(barYGeometry, packMaterial);
+    // Add the y axis bar mesh to the group.
+    pack.add(barYMesh);
+    // Create a box geometry for the z axis bar.
+    const barZGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.8);
+    // Create a mesh for the z axis bar.
+    const barZMesh = new THREE.Mesh(barZGeometry, packMaterial);
+    // Add the z axis bar mesh to the group.
+    pack.add(barZMesh);
     // Store the base y position for bobbing.
     pack.baseY = position.y;
-    // Copy the provided position to the mesh.
+    // Copy the provided position to the group.
     pack.position.copy(position);
     // Save the spawn time for expiration checks.
     pack.spawnTime = Date.now();
-    // Add the health pack mesh to the scene.
+    // Add the health pack group to the scene.
     scene.add(pack);
     // Add the health pack to the health packs array.
     healthPacks.push(pack);
