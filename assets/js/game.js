@@ -261,8 +261,20 @@ const moveSpeed = 0.1;
 // Define the player's mouse sensitivity.
 const mouseSpeed = 0.002;
 
-// Create a new vector to store the player's velocity.
-const velocity = new THREE.Vector3();
+// Create a new vector to store the player's input direction.
+const inputVelocity = new THREE.Vector3();
+// Create a new vector to store the player's horizontal velocity.
+const horizontalVelocity = new THREE.Vector3();
+// Define how quickly the player accelerates while on the ground.
+const groundAcceleration = 0.02;
+// Define how quickly the player accelerates while in the air.
+const airAcceleration = 0.01;
+// Define the friction applied when the player is on the ground.
+const groundFriction = 0.8;
+// Define the friction applied when the player is in the air.
+const airFriction = 0.99;
+// Define the maximum speed the player can reach.
+const maxSpeed = 0.5;
 
 // Define the gravity force applied each frame.
 const gravity = -0.01;
@@ -615,50 +627,72 @@ function animate(currentTime) {
         return;
     }
 
-    // Stop any previous movement.
-    velocity.set(0, 0, 0);
+    // Reset the input velocity vector.
+    inputVelocity.set(0, 0, 0);
 
-    // Get the player's forward/backward movement.
+    // Check for forward movement.
     if (keys['w'] || keys['z']) {
-        // Move forward.
-        velocity.z -= 1;
+        // Apply forward input.
+        inputVelocity.z -= 1;
     }
-    // Get the player's forward/backward movement.
+    // Check for backward movement.
     if (keys['s']) {
-        // Move backward.
-        velocity.z += 1;
+        // Apply backward input.
+        inputVelocity.z += 1;
     }
-    // Get the player's sideways movement.
+    // Check for left movement.
     if (keys['a'] || keys['q']) {
-        // Move left.
-        velocity.x -= 1;
+        // Apply left input.
+        inputVelocity.x -= 1;
     }
-    // Get the player's sideways movement.
+    // Check for right movement.
     if (keys['d']) {
-        // Move right.
-        velocity.x += 1;
+        // Apply right input.
+        inputVelocity.x += 1;
     }
 
-    // Normalize the velocity vector to ensure consistent speed.
-    if (velocity.length() > 0) {
-        // Normalize the velocity.
-        velocity.normalize();
-        // Apply the movement speed.
-        velocity.multiplyScalar(moveSpeed);
+    // Normalize the input direction if needed.
+    if (inputVelocity.length() > 0) {
+        // Normalize the input direction vector.
+        inputVelocity.normalize();
+        // Rotate the input by the current yaw.
+        inputVelocity.applyAxisAngle(new THREE.Vector3(0, 1, 0), yawObject.rotation.y);
+        // Determine the acceleration based on grounded state.
+        const accel = isGrounded ? groundAcceleration : airAcceleration;
+        // Scale the input by the acceleration.
+        inputVelocity.multiplyScalar(accel);
+        // Add the input to the horizontal velocity.
+        horizontalVelocity.add(inputVelocity);
+    }
+
+    // Apply friction depending on grounded state.
+    if (isGrounded) {
+        // Apply strong friction on the ground.
+        horizontalVelocity.multiplyScalar(groundFriction);
+    } else {
+        // Apply light friction in the air.
+        horizontalVelocity.multiplyScalar(airFriction);
+    }
+
+    // Clamp the horizontal velocity to the maximum speed.
+    if (horizontalVelocity.length() > maxSpeed) {
+        // Normalize the horizontal velocity.
+        horizontalVelocity.normalize();
+        // Scale it to the maximum speed.
+        horizontalVelocity.multiplyScalar(maxSpeed);
     }
 
     // Create a copy of the player's position for collision testing.
     const potentialPosition = yawObject.position.clone();
-    // Create a vector for movement in local space.
-    const moveVector = new THREE.Vector3(velocity.x, 0, velocity.z);
-    // Rotate the movement vector by the player's yaw rotation.
-    moveVector.applyAxisAngle(new THREE.Vector3(0, 1, 0), yawObject.rotation.y);
-    // Add the movement vector to the potential position.
-    potentialPosition.add(moveVector);
+    // Add the horizontal velocity to the potential position.
+    potentialPosition.add(horizontalVelocity);
     // Check for collisions with obstacles before moving.
     if (!collidesWithObstacles(potentialPosition, 1)) {
         // Update the player's position if no collision occurs.
         yawObject.position.copy(potentialPosition);
+    } else {
+        // Zero the horizontal velocity if a collision occurs.
+        horizontalVelocity.set(0, 0, 0);
     }
 
     // Apply gravity to the vertical velocity.
