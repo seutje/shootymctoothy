@@ -734,8 +734,39 @@ function animate(currentTime) {
         // Update the player's position if no collision occurs.
         yawObject.position.copy(potentialPosition);
     } else {
-        // Zero the horizontal velocity if a collision occurs.
-        horizontalVelocity.set(0, 0, 0);
+        // Store the original horizontal speed for later comparison.
+        const originalSpeed = horizontalVelocity.length();
+        // Create a position that only moves along the x axis.
+        const potentialX = yawObject.position.clone();
+        // Apply the horizontal x velocity to the potential position.
+        potentialX.x += horizontalVelocity.x;
+        // Check if moving along the x axis causes a collision.
+        if (!collidesWithObstacles(potentialX, 1)) {
+            // Copy the allowed x position to the player.
+            yawObject.position.x = potentialX.x;
+        } else {
+            // Remove the x velocity when hitting a wall.
+            horizontalVelocity.x = 0;
+        }
+        // Create a position that only moves along the z axis.
+        const potentialZ = yawObject.position.clone();
+        // Apply the horizontal z velocity to the potential position.
+        potentialZ.z += horizontalVelocity.z;
+        // Check if moving along the z axis causes a collision.
+        if (!collidesWithObstacles(potentialZ, 1)) {
+            // Copy the allowed z position to the player.
+            yawObject.position.z = potentialZ.z;
+        } else {
+            // Remove the z velocity when hitting a wall.
+            horizontalVelocity.z = 0;
+        }
+        // Store the remaining horizontal speed after removing blocked axes.
+        const remainingSpeed = horizontalVelocity.length();
+        // Reduce speed based on how much was blocked by the obstacle.
+        if (originalSpeed > 0) {
+            // Scale the velocity proportionally to the remaining speed.
+            horizontalVelocity.multiplyScalar(remainingSpeed / originalSpeed);
+        }
     }
 
     // Apply gravity to the vertical velocity.
