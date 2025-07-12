@@ -761,8 +761,8 @@ function explodeRocket(position) {
     }
     // Apply splash damage to the player.
     if (yawObject.position.distanceTo(position) < 3) {
-        // Reduce the player's health by twenty.
-        health -= 20;
+        // Reduce the player's health by twenty without going negative.
+        health = Math.max(health - 20, 0);
     }
 }
 
@@ -1221,8 +1221,8 @@ function animate(currentTime) {
             scene.remove(projectile);
             // Remove the projectile from the array.
             enemyProjectiles.splice(i, 1);
-            // Decrease player health.
-            health -= 10;
+            // Decrease player health without going below zero.
+            health = Math.max(health - 10, 0);
             // Play the damage sound effect only after player interaction.
             if (!autoplay) {
                 // Call the function to play the damage sound.
