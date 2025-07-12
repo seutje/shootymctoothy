@@ -1083,6 +1083,11 @@ function animate(currentTime) {
                 // Mark the rocket for explosion.
                 explode = true;
             }
+            // Explode when the rocket touches the ground.
+            if (projectile.position.y <= 0) {
+                // Mark the rocket for explosion.
+                explode = true;
+            }
             // Explode when leaving the play area.
             if (Math.abs(projectile.position.x) > 250 || Math.abs(projectile.position.z) > 250) {
                 // Mark the rocket for explosion.
