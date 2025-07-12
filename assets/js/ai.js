@@ -36,33 +36,106 @@ function findVisibleHealthPack() {
     return closest;
 }
 
+// Function to check if a movement direction has an obstacle.
+function isDirectionClear(dir) {
+    // Create a vector to store the movement step.
+    const step = new THREE.Vector3();
+    // Check for forward movement.
+    if (dir === 'w') {
+        // Set the step to move one unit forward.
+        step.set(0, 0, -1);
+    } else if (dir === 's') {
+        // Set the step to move one unit backward.
+        step.set(0, 0, 1);
+    } else if (dir === 'a') {
+        // Set the step to move one unit left.
+        step.set(-1, 0, 0);
+    } else if (dir === 'd') {
+        // Set the step to move one unit right.
+        step.set(1, 0, 0);
+    } else {
+        // Return false for an unknown direction.
+        return false;
+    }
+    // Rotate the step based on the player's yaw.
+    step.applyAxisAngle(new THREE.Vector3(0, 1, 0), yawObject.rotation.y);
+    // Clone the player position for collision checks.
+    const pos = yawObject.position.clone();
+    // Add the step to the cloned position.
+    pos.add(step);
+    // Return true when no obstacle blocks the position.
+    return !collidesWithObstacles(pos, 1);
+}
+
+// Function to list all directions without obstacles.
+function getOpenDirections() {
+    // Create an array for valid directions.
+    const open = [];
+    // Define every possible movement key.
+    const dirs = ['w', 'a', 's', 'd'];
+    // Loop over each direction.
+    dirs.forEach(dir => {
+        // Add the direction when the path is clear.
+        if (isDirectionClear(dir)) {
+            // Push the direction into the open array.
+            open.push(dir);
+        }
+    });
+    // Return all clear directions.
+    return open;
+}
+
 // Function to update the autoplay AI each frame.
 function updateAutoplayAI(currentTime) {
     // Look for a health pack when health is below one hundred.
     const pack = health < 100 ? findVisibleHealthPack() : null;
+    // Determine which directions are free of obstacles.
+    const openDirs = getOpenDirections();
     // Check if a pack was found.
     if (pack) {
         // Calculate the difference on the x axis.
         const dx = pack.position.x - yawObject.position.x;
         // Calculate the difference on the z axis.
         const dz = pack.position.z - yawObject.position.z;
+        // Choose a desired direction toward the pack.
+        let desired;
         // Decide whether horizontal or depth movement is greater.
         if (Math.abs(dx) > Math.abs(dz)) {
             // Move right if the pack is to the right.
-            currentAIDirection = dx > 0 ? 'd' : 'a';
+            desired = dx > 0 ? 'd' : 'a';
         } else {
             // Move forward if the pack is ahead.
-            currentAIDirection = dz > 0 ? 's' : 'w';
+            desired = dz > 0 ? 's' : 'w';
+        }
+        // Use the desired direction if it is clear.
+        if (openDirs.includes(desired)) {
+            // Set the AI direction to the desired direction.
+            currentAIDirection = desired;
+        } else if (openDirs.length > 0) {
+            // Choose a random clear direction when blocked.
+            currentAIDirection = openDirs[Math.floor(Math.random() * openDirs.length)];
+        } else {
+            // Clear the direction when no path is open.
+            currentAIDirection = null;
         }
         // Update the time before another direction change.
         aiDirectionChangeTime = currentTime + 500;
     } else if (currentTime > aiDirectionChangeTime) {
-        // Possible movement choices for the AI that avoid standing still.
-        const dirs = ['w', 'a', 's', 'd'];
-        // Select a random direction from the choices.
-        currentAIDirection = dirs[Math.floor(Math.random() * dirs.length)];
+        // Choose a random clear direction for wandering.
+        if (openDirs.length > 0) {
+            // Select a random direction from the open list.
+            currentAIDirection = openDirs[Math.floor(Math.random() * openDirs.length)];
+        } else {
+            // Clear the direction when no path is available.
+            currentAIDirection = null;
+        }
         // Schedule the next direction change after one second.
         aiDirectionChangeTime = currentTime + 1000;
+    }
+    // Verify that the current direction is still clear.
+    if (currentAIDirection && !isDirectionClear(currentAIDirection)) {
+        // Stop moving when the path becomes blocked.
+        currentAIDirection = null;
     }
     // Reset the movement keys before applying the AI direction.
     keys['w'] = false;
