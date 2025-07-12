@@ -263,6 +263,12 @@ const mouseSpeed = 0.002;
 
 // Create a new vector to store the player's velocity.
 const velocity = new THREE.Vector3();
+// Create a new vector to store the player's horizontal velocity.
+const horizontalVelocity = new THREE.Vector3();
+// Define the acceleration added when strafejumping in the air.
+const airAcceleration = 0.02;
+// Define the maximum speed the player can reach while airborne.
+const maxAirSpeed = moveSpeed * 1.5;
 
 // Define the gravity force applied each frame.
 const gravity = -0.01;
@@ -647,10 +653,22 @@ function animate(currentTime) {
         velocity.multiplyScalar(moveSpeed);
     }
 
+    // Apply ground or air movement based on whether the player is grounded.
+    if (isGrounded) {
+        // Copy the input velocity directly when on the ground.
+        horizontalVelocity.copy(velocity);
+    }
+    else {
+        // Add a fraction of the input velocity when in the air.
+        horizontalVelocity.add(velocity.clone().multiplyScalar(airAcceleration));
+        // Clamp the air speed to prevent infinite acceleration.
+        horizontalVelocity.clampLength(0, maxAirSpeed);
+    }
+
     // Create a copy of the player's position for collision testing.
     const potentialPosition = yawObject.position.clone();
     // Create a vector for movement in local space.
-    const moveVector = new THREE.Vector3(velocity.x, 0, velocity.z);
+    const moveVector = new THREE.Vector3(horizontalVelocity.x, 0, horizontalVelocity.z);
     // Rotate the movement vector by the player's yaw rotation.
     moveVector.applyAxisAngle(new THREE.Vector3(0, 1, 0), yawObject.rotation.y);
     // Add the movement vector to the potential position.
