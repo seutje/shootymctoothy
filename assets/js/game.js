@@ -441,7 +441,7 @@ const rocketShotInterval = 800;
 // Constant interval for the lightning gun.
 const lightningShotInterval = 300;
 // Define the maximum range of the lightning gun.
-const lightningRange = 40;
+const lightningRange = 100;
 // Define how far the gun moves up and down when bobbing.
 const gunBobAmplitude = 0.05;
 // Define how quickly the bobbing motion slows down.
