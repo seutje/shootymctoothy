@@ -117,8 +117,20 @@ function updateAutoplayAI(currentTime) {
         const distance = yawObject.position.distanceTo(target.position);
         // Determine the travel time based on projectile speed.
         const travelTime = distance / projectileSpeed;
-        // Predict the target position after the travel time.
-        const predicted = target.position.clone().add(target.velocity.clone().multiplyScalar(travelTime));
+        // Create a vector for the player's current velocity.
+        const playerVelocity = new THREE.Vector3(
+            // Use the horizontal x component of the player's velocity.
+            horizontalVelocity.x,
+            // Use the vertical component representing jumps and falls.
+            verticalVelocity,
+            // Use the horizontal z component of the player's velocity.
+            horizontalVelocity.z
+        );
+        // Predict the target position using relative velocity.
+        const predicted = target.position.clone().add(
+            // Subtract the player velocity from the enemy velocity for leading.
+            target.velocity.clone().sub(playerVelocity).multiplyScalar(travelTime)
+        );
         // Subtract the player position from the predicted position.
         dir.subVectors(predicted, yawObject.position);
         // Calculate the desired yaw to face the predicted position.
