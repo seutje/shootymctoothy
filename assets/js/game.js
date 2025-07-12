@@ -135,6 +135,32 @@ function collidesWithObstacles(position, radius) {
     return false;
 }
 
+// Function to check if there is a clear path between two points.
+function hasLineOfSight(start, end) {
+    // Create a vector from start to end.
+    const direction = new THREE.Vector3();
+    // Subtract the start position from the end position.
+    direction.subVectors(end, start);
+    // Get the distance between the points.
+    const distance = direction.length();
+    // Normalize the direction for stepping.
+    direction.normalize();
+    // Create a position vector for stepping through space.
+    const testPos = start.clone();
+    // Step along the line in half unit increments.
+    for (let i = 0; i < distance; i += 0.5) {
+        // Move the test position forward along the line.
+        testPos.addScaledVector(direction, 0.5);
+        // Check if the test position collides with an obstacle.
+        if (collidesWithObstacles(testPos, 0.5)) {
+            // Return false if an obstacle blocks the line of sight.
+            return false;
+        }
+    }
+    // Return true if no obstacles were encountered.
+    return true;
+}
+
 // Create an array to store enemy objects.
 const enemies = [];
 // Create an array to store projectile objects.
@@ -253,6 +279,14 @@ let gamePaused = false;
 let gameOver = false;
 // Variable to track if the game has started.
 let gameStarted = false;
+// Variable to indicate autoplay mode is active.
+let autoplay = true;
+// Track when the AI should change direction.
+let aiDirectionChangeTime = 0;
+// Track when the AI should fire the next shot.
+let aiShootTime = 0;
+// Store the current AI movement direction.
+let currentAIDirection = null;
 // Variable to store the animation frame ID.
 let animationFrameId;
 
@@ -456,8 +490,11 @@ function createProjectile() {
     scene.add(projectile);
     // Add the projectile to the projectiles array.
     projectiles.push(projectile);
-    // Play the shooting sound effect.
-    playShootSound();
+    // Play the shooting sound effect only after player interaction.
+    if (!autoplay) {
+        // Call the function to play the shooting sound.
+        playShootSound();
+    }
 }
 
 // The function to create an enemy projectile.
@@ -595,6 +632,71 @@ for (let i = 0; i < 10; i++) {
     createEnemy();
 }
 
+// Function to update the autoplay AI each frame.
+function updateAutoplayAI(currentTime) {
+    // Change the movement direction periodically.
+    if (currentTime > aiDirectionChangeTime) {
+        // Possible movement choices for the AI.
+        const dirs = ['w', 'a', 's', 'd', null];
+        // Select a random direction from the choices.
+        currentAIDirection = dirs[Math.floor(Math.random() * dirs.length)];
+        // Schedule the next direction change after one second.
+        aiDirectionChangeTime = currentTime + 1000;
+    }
+    // Reset the movement keys before applying the AI direction.
+    keys['w'] = false;
+    keys['a'] = false;
+    keys['s'] = false;
+    keys['d'] = false;
+    // Apply the current AI movement direction if any.
+    if (currentAIDirection) {
+        // Set the chosen direction key to true.
+        keys[currentAIDirection] = true;
+    }
+    // Find the nearest enemy to target.
+    let target = null;
+    // Set the minimum distance to a large value.
+    let minDist = Infinity;
+    // Iterate over every enemy.
+    enemies.forEach(enemy => {
+        // Calculate the distance to this enemy.
+        const dist = yawObject.position.distanceTo(enemy.position);
+        // Check if this enemy is closer than the current target.
+        if (dist < minDist) {
+            // Update the minimum distance.
+            minDist = dist;
+            // Set this enemy as the new target.
+            target = enemy;
+        }
+    });
+    // Aim at the target if one exists.
+    if (target) {
+        // Create a vector from the player to the target.
+        const dir = new THREE.Vector3();
+        // Subtract the player position from the target position.
+        dir.subVectors(target.position, yawObject.position);
+        // Rotate the player to face the target.
+        yawObject.rotation.y = Math.atan2(-dir.x, -dir.z);
+        // Fire a shot periodically when there is a clear path.
+        if (currentTime > aiShootTime) {
+            // Check if the player can see the target without obstacles.
+            if (hasLineOfSight(yawObject.position, target.position)) {
+                // Create a projectile towards the target.
+                createProjectile();
+            }
+            // Schedule the next shot after half a second.
+            aiShootTime = currentTime + 500;
+        }
+    }
+    // Randomly jump if on the ground.
+    if (Math.random() < 0.01 && isGrounded) {
+        // Set the vertical velocity for a jump.
+        verticalVelocity = jumpSpeed;
+        // Mark the player as not grounded.
+        isGrounded = false;
+    }
+}
+
 // The main animation loop.
 function animate(currentTime) {
     // Request the next animation frame.
@@ -614,6 +716,11 @@ function animate(currentTime) {
 
     // If the game is paused, do not update game logic.
     if (gamePaused) {
+        // Rotate the camera slowly during autoplay.
+        if (autoplay) {
+            // Increase the yaw rotation slightly each frame.
+            yawObject.rotation.y += 0.005;
+        }
         // Render the scene without updates.
         renderer.render(scene, camera);
         // Check if two hundred milliseconds have passed since the last UI update.
@@ -625,6 +732,12 @@ function animate(currentTime) {
         }
         // Exit early to skip game logic.
         return;
+    }
+
+    // Update the AI controller during autoplay mode.
+    if (autoplay) {
+        // Call the AI update function with the current time.
+        updateAutoplayAI(currentTime);
     }
 
     // Reset the input velocity vector.
@@ -803,33 +916,53 @@ function animate(currentTime) {
             enemyProjectiles.splice(i, 1);
             // Decrease player health.
             health -= 10;
-            // Play the damage sound effect.
-            playDamageSound();
+            // Play the damage sound effect only after player interaction.
+            if (!autoplay) {
+                // Call the function to play the damage sound.
+                playDamageSound();
+            }
             // Check if player is dead.
             if (health <= 0) {
-                // Determine if the current score qualifies for the high score list.
-                const qualifies = highScores.length < MAX_HIGH_SCORES || score > Math.min(...highScores.map(entry => entry.score));
-                // Check if the score qualifies for the top five.
-                if (qualifies) {
-                    // Prompt the player for their name or use a default value.
-                    const playerName = prompt('Enter your name:', DEFAULT_PLAYER_NAME) || DEFAULT_PLAYER_NAME;
-                    // Add the new score to the high scores array.
-                    highScores.push({ name: playerName, score: score });
-                    // Sort high scores in descending order.
-                    highScores.sort((a, b) => b.score - a.score);
-                    // Keep only the top 5 scores.
-                    highScores = highScores.slice(0, MAX_HIGH_SCORES);
-                    // Save high scores to local storage.
-                    saveHighScores();
+                // Only record high scores when not in autoplay mode.
+                if (!autoplay) {
+                    // Determine if the current score qualifies for the high score list.
+                    const qualifies = highScores.length < MAX_HIGH_SCORES || score > Math.min(...highScores.map(entry => entry.score));
+                    // Check if the score qualifies for the top five.
+                    if (qualifies) {
+                        // Prompt the player for their name or use a default value.
+                        const playerName = prompt('Enter your name:', DEFAULT_PLAYER_NAME) || DEFAULT_PLAYER_NAME;
+                        // Add the new score to the high scores array.
+                        highScores.push({ name: playerName, score: score });
+                        // Sort high scores in descending order.
+                        highScores.sort((a, b) => b.score - a.score);
+                        // Keep only the top 5 scores.
+                        highScores = highScores.slice(0, MAX_HIGH_SCORES);
+                        // Save high scores to local storage.
+                        saveHighScores();
+                    }
                 }
-                // Stop the animation loop.
-                gamePaused = true;
-                // Indicate that the game has ended.
-                gameOver = true;
-                // Stop the soundtrack when the game ends.
-                stopSoundtrack();
-                // Release the mouse pointer.
-                document.exitPointerLock();
+                // Check if autoplay mode is active.
+                if (autoplay) {
+                    // Reset the player health for a fresh demo.
+                    health = 100;
+                    // Reset the score for a clean slate.
+                    score = 0;
+                    // Reset the kill count for consistency.
+                    killCount = 0;
+                    // Restart the autoplay demo.
+                    startAutoplay();
+                    // Clear the game over flag so the overlay does not show.
+                    gameOver = false;
+                } else {
+                    // Stop the animation loop when the player dies.
+                    gamePaused = true;
+                    // Indicate that the game has ended.
+                    gameOver = true;
+                    // Stop the soundtrack when the game ends.
+                    stopSoundtrack();
+                    // Release the mouse pointer.
+                    document.exitPointerLock();
+                }
             }
         }
     }
@@ -857,8 +990,11 @@ function animate(currentTime) {
             healthPacks.splice(i, 1);
             // Restore the player's health by fifty points.
             health = Math.min(health + 50, 100);
-            // Play the health pack pickup sound effect.
-            playHealthPackSound();
+            // Play the health pack pickup sound only after player interaction.
+            if (!autoplay) {
+                // Call the function to play the health pack sound.
+                playHealthPackSound();
+            }
             // Continue to the next pack.
             continue;
         }
@@ -934,8 +1070,8 @@ function animate(currentTime) {
 // Load high scores when the script starts.
 loadHighScores();
 
-// Initially pause the game.
-gamePaused = true;
+// Start with the game running for the autoplay demo.
+gamePaused = false;
 
 // Function to start the game.
 function startGame() {
@@ -943,10 +1079,23 @@ function startGame() {
     gameStarted = true;
     // Unpause the game.
     gamePaused = false;
+    // Disable autoplay mode when the player starts.
+    autoplay = false;
     // Start the soundtrack.
     startSoundtrack();
     // Request pointer lock.
     document.body.requestPointerLock();
+    // Reset movement keys to avoid AI input persisting.
+    if (typeof keys !== 'undefined') {
+        // Clear the forward key state.
+        keys['w'] = false;
+        // Clear the left key state.
+        keys['a'] = false;
+        // Clear the backward key state.
+        keys['s'] = false;
+        // Clear the right key state.
+        keys['d'] = false;
+    }
 
 
     // Reset enemy shot timers.
@@ -955,3 +1104,21 @@ function startGame() {
         enemy.lastShotTime = Date.now();
     });
 }
+
+// Function to start the autoplay demo.
+function startAutoplay() {
+    // Keep the start screen visible by leaving the started flag false.
+    gameStarted = false;
+    // Ensure the game is not paused so the AI can run.
+    gamePaused = false;
+    // Keep autoplay mode enabled for the demo.
+    autoplay = true;
+    // Reset enemy shot timers.
+    enemies.forEach(enemy => {
+        // Set the last shot time for the enemy to the current time.
+        enemy.lastShotTime = Date.now();
+    });
+}
+
+// Start the autoplay demo when the script loads.
+startAutoplay();
