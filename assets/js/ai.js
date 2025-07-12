@@ -6,6 +6,8 @@ let aiDirectionChangeTime = 0;
 let aiShootTime = 0;
 // Store the current AI movement direction.
 let currentAIDirection = null;
+// Store the projectile speed used for leading targets.
+const projectileSpeed = 1;
 
 // Function to update the autoplay AI each frame.
 function updateAutoplayAI(currentTime) {
@@ -67,14 +69,26 @@ function updateAutoplayAI(currentTime) {
     if (target) {
         // Create a vector from the player to the target.
         const dir = new THREE.Vector3();
-        // Subtract the player position from the target position.
-        dir.subVectors(target.position, yawObject.position);
-        // Rotate the player to face the target.
+        // Calculate the distance from the player to the target.
+        const distance = yawObject.position.distanceTo(target.position);
+        // Determine the travel time based on projectile speed.
+        const travelTime = distance / projectileSpeed;
+        // Predict the target position after the travel time.
+        const predicted = target.position.clone().add(target.velocity.clone().multiplyScalar(travelTime));
+        // Subtract the player position from the predicted position.
+        dir.subVectors(predicted, yawObject.position);
+        // Rotate the player to face the predicted position.
         yawObject.rotation.y = Math.atan2(-dir.x, -dir.z);
+        // Calculate the horizontal distance to the predicted position.
+        const horiz = Math.sqrt(dir.x * dir.x + dir.z * dir.z);
+        // Calculate the pitch angle toward the predicted position.
+        const pitch = Math.atan2(predicted.y - yawObject.position.y, horiz);
+        // Set the camera vertical rotation using the pitch value.
+        camera.rotation.x = pitch;
         // Fire a shot periodically when there is a clear path.
         if (currentTime > aiShootTime) {
-            // Check if the player can see the target without obstacles.
-            if (hasLineOfSight(yawObject.position, target.position)) {
+            // Check if the player can see the predicted position without obstacles.
+            if (hasLineOfSight(yawObject.position, predicted)) {
                 // Create a projectile towards the target.
                 createProjectile();
             }
@@ -108,4 +122,3 @@ function startAutoplay() {
 
 // Start the autoplay demo when the script loads.
 startAutoplay();
-
