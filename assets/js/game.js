@@ -253,6 +253,8 @@ let gamePaused = false;
 let gameOver = false;
 // Variable to track if the game has started.
 let gameStarted = false;
+// Variable to indicate autoplay mode is active.
+let autoplay = true;
 // Variable to store the animation frame ID.
 let animationFrameId;
 
@@ -614,6 +616,11 @@ function animate(currentTime) {
 
     // If the game is paused, do not update game logic.
     if (gamePaused) {
+        // Rotate the camera slowly during autoplay.
+        if (autoplay) {
+            // Increase the yaw rotation slightly each frame.
+            yawObject.rotation.y += 0.005;
+        }
         // Render the scene without updates.
         renderer.render(scene, camera);
         // Check if two hundred milliseconds have passed since the last UI update.
@@ -943,6 +950,8 @@ function startGame() {
     gameStarted = true;
     // Unpause the game.
     gamePaused = false;
+    // Disable autoplay mode when the player starts.
+    autoplay = false;
     // Start the soundtrack.
     startSoundtrack();
     // Request pointer lock.
