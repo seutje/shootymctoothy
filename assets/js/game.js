@@ -76,6 +76,31 @@ scene.add(yawObject);
 // Add the camera to the yaw object.
 yawObject.add(camera);
 
+// Create a group to hold the gun parts.
+const gunGroup = new THREE.Group();
+// Move the entire gun slightly forward so it is in view.
+gunGroup.position.set(0, 0, -0.3);
+// Create a box geometry for the gun barrel.
+const barrelGeometry = new THREE.BoxGeometry(0.1, 0.1, 0.6);
+// Create a yellow material for the gun meshes.
+const gunMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+// Create a mesh for the barrel using the geometry and material.
+const barrelMesh = new THREE.Mesh(barrelGeometry, gunMaterial);
+// Position the barrel mesh in front of the camera.
+barrelMesh.position.set(0.2, -0.2, -0.5);
+// Add the barrel mesh to the gun group.
+gunGroup.add(barrelMesh);
+// Create a box geometry for the gun handle.
+const handleGeometry = new THREE.BoxGeometry(0.1, 0.3, 0.1);
+// Create a mesh for the handle using the same material.
+const handleMesh = new THREE.Mesh(handleGeometry, gunMaterial);
+// Position the handle below the barrel to form an upside down L and shift it slightly right.
+handleMesh.position.set(0.25, -0.45, -0.35);
+// Add the handle mesh to the gun group.
+gunGroup.add(handleMesh);
+// Attach the gun group to the camera so it follows the view.
+camera.add(gunGroup);
+
 // Store the world width for obstacle placement calculations.
 const worldWidth = 500;
 // Store the world depth for obstacle placement calculations.
