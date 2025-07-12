@@ -14,3 +14,8 @@ test('audio.js parses without errors', () => {
   const code = fs.readFileSync('assets/js/audio.js', 'utf8');
   expect(() => new Function(code)).not.toThrow();
 });
+
+test('ai.js parses without errors', () => {
+  const code = fs.readFileSync('assets/js/ai.js', 'utf8');
+  expect(() => new Function(code)).not.toThrow();
+});
