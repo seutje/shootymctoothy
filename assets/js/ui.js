@@ -57,16 +57,20 @@ function drawUI() {
         uiContext.fillText('Press P or Esc to resume', uiCanvas.width / 2 - 120, uiCanvas.height / 2 - 30);
         // Update the restart button x coordinate.
         restartButtonArea.x = uiCanvas.width / 2 - 70;
-        // Update the restart button y coordinate.
-        restartButtonArea.y = uiCanvas.height / 2;
+        // Update the restart button y coordinate so the button is centered.
+        restartButtonArea.y = uiCanvas.height / 2 - restartButtonArea.height / 2;
         // Set a gray color for the button background.
         uiContext.fillStyle = 'gray';
         // Draw the restart button rectangle.
         uiContext.fillRect(restartButtonArea.x, restartButtonArea.y, restartButtonArea.width, restartButtonArea.height);
         // Set the text color for the button label.
         uiContext.fillStyle = 'white';
-        // Draw the restart button label.
-        uiContext.fillText('Restart', restartButtonArea.x + 20, restartButtonArea.y + 20);
+        // Center the text horizontally for the button label.
+        uiContext.textAlign = 'center';
+        // Draw the restart button label at the center of the button.
+        uiContext.fillText('Restart', restartButtonArea.x + restartButtonArea.width / 2, restartButtonArea.y + 20);
+        // Reset text alignment to default.
+        uiContext.textAlign = 'left';
         // Update the slider x coordinate.
         volumeSliderArea.x = uiCanvas.width / 2 - volumeSliderArea.width / 2;
         // Update the slider y coordinate.
@@ -94,12 +98,16 @@ function drawUI() {
         uiContext.fillStyle = 'white';
         // Set the large font for the title.
         uiContext.font = '30px sans-serif';
-        // Draw the game title.
-        uiContext.fillText('ShootyMcToothy', uiCanvas.width / 2 - 120, uiCanvas.height / 2 - 40);
+        // Center the text horizontally for the title.
+        uiContext.textAlign = 'center';
+        // Draw the game title at the center of the box.
+        uiContext.fillText('ShootyMcToothy', uiCanvas.width / 2, uiCanvas.height / 2 - 40);
         // Set the font for the prompt.
         uiContext.font = '20px sans-serif';
-        // Draw the start prompt.
-        uiContext.fillText('Click to start', uiCanvas.width / 2 - 70, uiCanvas.height / 2 + 20);
+        // Draw the start prompt centered below the title.
+        uiContext.fillText('Click to start', uiCanvas.width / 2, uiCanvas.height / 2 + 20);
+        // Reset text alignment to default.
+        uiContext.textAlign = 'left';
     }
     // Check if the game is over while not in autoplay mode.
     if (gameOver && !autoplay) {
