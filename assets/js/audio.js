@@ -135,6 +135,32 @@ function playShootSound() {
     oscillator.stop(audioContext.currentTime + 0.2);
 }
 
+// The function to play the health pack pickup sound.
+function playHealthPackSound() {
+    // Create an oscillator for the pickup chirp.
+    const oscillator = audioContext.createOscillator();
+    // Create a gain node for volume control.
+    const gainNode = audioContext.createGain();
+    // Use a triangle wave for a mellow tone.
+    oscillator.type = 'triangle';
+    // Start the frequency at middle A.
+    oscillator.frequency.setValueAtTime(440, audioContext.currentTime);
+    // Sweep the frequency upward for effect.
+    oscillator.frequency.exponentialRampToValueAtTime(880, audioContext.currentTime + 0.2);
+    // Set the initial volume of the sound.
+    gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+    // Fade the volume out quickly.
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+    // Connect the oscillator to the gain node.
+    oscillator.connect(gainNode);
+    // Connect the gain node to the master volume control.
+    gainNode.connect(masterGain);
+    // Start the oscillator immediately.
+    oscillator.start();
+    // Stop the oscillator after the ramp.
+    oscillator.stop(audioContext.currentTime + 0.2);
+}
+
 // The function to start the soundtrack.
 function startSoundtrack() {
     // Resume the audio context if it is suspended.

@@ -6,6 +6,10 @@ test('playShootSound function is defined', () => {
   expect(audioCode).toMatch(/function playShootSound\(\)/);
 });
 
+test('playHealthPackSound function is defined', () => {
+  expect(audioCode).toMatch(/function playHealthPackSound\(\)/);
+});
+
 test('startSoundtrack function is defined', () => {
   expect(audioCode).toMatch(/function startSoundtrack\(\)/);
 });
