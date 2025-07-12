@@ -868,12 +868,8 @@ function animate(currentTime) {
                 }
                 // Check if autoplay mode is active.
                 if (autoplay) {
-                    // Reset the player health for a fresh demo.
-                    health = 100;
-                    // Reset the score for a clean slate.
-                    score = 0;
-                    // Reset the kill count for consistency.
-                    killCount = 0;
+                    // Reset the game state for a fresh demo.
+                    resetGameState();
                     // Restart the autoplay demo.
                     startAutoplay();
                     // Clear the game over flag so the overlay does not show.
@@ -998,12 +994,67 @@ loadHighScores();
 // Start with the game running for the autoplay demo.
 gamePaused = false;
 
+// Function to reset the core game state.
+function resetGameState() {
+    // Reset player health to one hundred.
+    health = 100;
+    // Reset the score to zero.
+    score = 0;
+    // Reset the kill count to zero.
+    killCount = 0;
+    // Reset the vertical velocity.
+    verticalVelocity = 0;
+    // Set the player as grounded.
+    isGrounded = true;
+    // Reset the player position on the x axis.
+    yawObject.position.x = 0;
+    // Reset the player position on the y axis.
+    yawObject.position.y = 2;
+    // Reset the player position on the z axis.
+    yawObject.position.z = 5;
+    // Reset the player rotation horizontally.
+    yawObject.rotation.y = 0;
+    // Reset the camera pitch.
+    camera.rotation.x = 0;
+    // Remove all existing enemies from the scene.
+    enemies.forEach(enemy => {
+        // Remove this enemy from the scene graph.
+        scene.remove(enemy);
+    });
+    // Clear the enemies array.
+    enemies.length = 0;
+    // Remove all friendly projectiles from the scene.
+    projectiles.forEach(p => {
+        // Remove the projectile mesh.
+        scene.remove(p);
+    });
+    // Clear the friendly projectiles array.
+    projectiles.length = 0;
+    // Remove all enemy projectiles from the scene.
+    enemyProjectiles.forEach(p => {
+        // Remove the projectile mesh.
+        scene.remove(p);
+    });
+    // Clear the enemy projectiles array.
+    enemyProjectiles.length = 0;
+    // Create ten new enemies.
+    for (let i = 0; i < 10; i++) {
+        // Create a new enemy.
+        createEnemy();
+    }
+}
+
 // Function to start the game.
 function startGame() {
     // Hide the start screen by setting the started flag.
     gameStarted = true;
     // Unpause the game.
     gamePaused = false;
+    // Reset the core game state.
+    if (typeof resetGameState !== 'undefined') {
+        // Call the resetGameState function when available.
+        resetGameState();
+    }
     // Disable autoplay mode when the player starts.
     autoplay = false;
     // Start the soundtrack.
