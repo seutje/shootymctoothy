@@ -54,7 +54,7 @@ function drawUI() {
         // Set the font for the resume prompt.
         uiContext.font = '20px sans-serif';
         // Draw the resume prompt.
-        uiContext.fillText('Press P to resume', uiCanvas.width / 2 - 90, uiCanvas.height / 2 + 30);
+        uiContext.fillText('Press P or Esc to resume', uiCanvas.width / 2 - 120, uiCanvas.height / 2 + 30);
     }
     // Check if the game has not started.
     if (!gameStarted && !gameOver) {

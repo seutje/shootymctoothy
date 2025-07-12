@@ -2,3 +2,27 @@ body {
     margin: 0;
     overflow: hidden;
 }
+
+#pauseMenu {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-family: sans-serif;
+}
+
+#pauseMenu button {
+    margin-top: 10px;
+}
+
+#pauseMenu input {
+    width: 80%;
+    margin-top: 10px;
+}

@@ -221,6 +221,25 @@ function updateUIScale() {
 // Call the scale update once at startup.
 updateUIScale();
 
+// Get the pause menu element.
+const pauseMenu = document.getElementById('pauseMenu');
+// Get the restart button element.
+const restartButton = document.getElementById('restartButton');
+// Get the volume slider element.
+const volumeSlider = document.getElementById('volumeSlider');
+// Add a click event listener to the restart button.
+restartButton.addEventListener('click', () => {
+    // Reload the page to restart the game.
+    location.reload();
+});
+// Add an input event listener to the volume slider.
+volumeSlider.addEventListener('input', () => {
+    // Update the volume using the slider value.
+    setVolume(parseFloat(volumeSlider.value));
+});
+// Set the initial volume based on the slider value.
+setVolume(parseFloat(volumeSlider.value));
+
 // Variables for FPS calculation.
 let lastFrameTime = 0;
 let frameCount = 0;
@@ -271,6 +290,28 @@ window.addEventListener('resize', onWindowResize, false);
 // A map to store the state of the keys.
 const keys = {};
 
+// Function to toggle the paused state.
+function togglePause() {
+    // Invert the paused flag.
+    gamePaused = !gamePaused;
+    // Check if the game is now paused.
+    if (gamePaused) {
+        // Stop the soundtrack loop.
+        stopSoundtrack();
+        // Release pointer lock to free the mouse.
+        document.exitPointerLock();
+        // Show the pause menu overlay.
+        pauseMenu.style.display = 'flex';
+    } else {
+        // Restart the soundtrack.
+        startSoundtrack();
+        // Request pointer lock again.
+        document.body.requestPointerLock();
+        // Hide the pause menu overlay.
+        pauseMenu.style.display = 'none';
+    }
+}
+
 // The function to handle keydown events.
 function onKeyDown(event) {
     // Set the key state to true.
@@ -289,20 +330,16 @@ function onKeyDown(event) {
     if (event.key.toLowerCase() === 'p') {
         // Ensure the game is in progress before toggling pause.
         if (gameStarted && !gameOver) {
-            // Toggle the paused state.
-            gamePaused = !gamePaused;
-            // Stop the soundtrack when pausing.
-            if (gamePaused) {
-                // Stop the soundtrack loop.
-                stopSoundtrack();
-                // Release pointer lock so the mouse can move freely.
-                document.exitPointerLock();
-            } else {
-                // Restart the soundtrack when resuming.
-                startSoundtrack();
-                // Request pointer lock to regain mouse control.
-                document.body.requestPointerLock();
-            }
+            // Call the pause toggle function.
+            togglePause();
+        }
+    }
+    // Check if the escape key was pressed.
+    if (event.key === 'Escape') {
+        // Ensure the game is in progress before toggling pause.
+        if (gameStarted && !gameOver) {
+            // Call the pause toggle function.
+            togglePause();
         }
     }
 }
@@ -713,6 +750,8 @@ function animate(currentTime) {
                 stopSoundtrack();
                 // Release the mouse pointer.
                 document.exitPointerLock();
+                // Hide the pause menu when the game ends.
+                pauseMenu.style.display = 'none';
             }
         }
     }
@@ -789,6 +828,8 @@ loadHighScores();
 
 // Initially pause the game.
 gamePaused = true;
+// Hide the pause menu when the page loads.
+pauseMenu.style.display = 'none';
 
 // Function to start the game.
 function startGame() {
@@ -800,6 +841,8 @@ function startGame() {
     startSoundtrack();
     // Request pointer lock.
     document.body.requestPointerLock();
+    // Hide the pause menu when the game starts.
+    pauseMenu.style.display = 'none';
 
     // Reset enemy shot timers.
     enemies.forEach(enemy => {
