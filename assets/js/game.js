@@ -225,8 +225,10 @@ updateUIScale();
 const restartButtonArea = { x: 0, y: 0, width: 140, height: 30 };
 // Create an object to store the volume slider bounds.
 const volumeSliderArea = { x: 0, y: 0, width: 120, height: 10 };
+// Load the stored volume value from local storage if available.
+const storedVolume = localStorage.getItem('shootyVolume');
 // Track the current volume level as a number between zero and one.
-let volumeLevel = 1;
+let volumeLevel = storedVolume !== null ? parseFloat(storedVolume) : 1;
 // Set the starting volume level using the setter function.
 setVolume(volumeLevel);
 
@@ -381,6 +383,8 @@ function onMouseDown(event) {
             volumeLevel = (event.clientX - volumeSliderArea.x) / volumeSliderArea.width;
             // Apply the new volume level.
             setVolume(volumeLevel);
+            // Store the new volume level in local storage.
+            localStorage.setItem('shootyVolume', volumeLevel);
             // Exit after handling the click.
             return;
         }
