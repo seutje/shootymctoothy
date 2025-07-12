@@ -115,8 +115,8 @@ function playShootSound() {
     oscillator.type = 'square';
     // Create a gain node to shape the volume envelope.
     const gainNode = audioContext.createGain();
-    // Set the oscillator frequency to a high pitch.
-    oscillator.frequency.setValueAtTime(1500, audioContext.currentTime);
+    // Set the oscillator frequency to a lower pitch for a deeper sound.
+    oscillator.frequency.setValueAtTime(375, audioContext.currentTime);
     // Start the gain at a noticeable volume level.
     gainNode.gain.setValueAtTime(0.4, audioContext.currentTime);
     // Fade the gain rapidly for a short sound.
