@@ -1093,9 +1093,9 @@ function startGame() {
 
 // Function to start the autoplay demo.
 function startAutoplay() {
-    // Hide the start screen by setting the started flag.
-    gameStarted = true;
-    // Ensure the game is not paused.
+    // Keep the start screen visible by leaving the started flag false.
+    gameStarted = false;
+    // Ensure the game is not paused so the AI can run.
     gamePaused = false;
     // Keep autoplay mode enabled for the demo.
     autoplay = true;
