@@ -38,8 +38,8 @@ function findVisibleHealthPack() {
 
 // Function to update the autoplay AI each frame.
 function updateAutoplayAI(currentTime) {
-    // Find the closest visible health pack if any.
-    const pack = findVisibleHealthPack();
+    // Look for a health pack when health is below one hundred.
+    const pack = health < 100 ? findVisibleHealthPack() : null;
     // Check if a pack was found.
     if (pack) {
         // Calculate the difference on the x axis.
