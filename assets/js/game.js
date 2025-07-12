@@ -84,6 +84,8 @@ const worldDepth = 500;
 const obstacleSize = 5;
 // Define the maximum fraction of the world that obstacles may occupy.
 const maxObstacleCoverage = 0.4;
+// Set the initial number of obstacles to spawn.
+const initialObstacleCount = 100;
 
 // Create a texture object that will hold the obstacle texture.
 const obstacleTexture = new THREE.Texture();
@@ -150,8 +152,8 @@ function spawnRandomObstacles(desiredCount) {
     }
 }
 
-// Spawn fifty obstacles at random positions.
-spawnRandomObstacles(50);
+// Spawn one hundred obstacles at random positions.
+spawnRandomObstacles(initialObstacleCount);
 
 // Function to check if a position collides with obstacles.
 function collidesWithObstacles(position, radius) {
