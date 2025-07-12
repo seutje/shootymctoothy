@@ -441,7 +441,7 @@ const rocketShotInterval = 800;
 // Constant interval for the lightning gun.
 const lightningShotInterval = 300;
 // Define the maximum range of the lightning gun.
-const lightningRange = 20;
+const lightningRange = 40;
 // Define how far the gun moves up and down when bobbing.
 const gunBobAmplitude = 0.05;
 // Define how quickly the bobbing motion slows down.
@@ -688,10 +688,10 @@ function createProjectile() {
         // Add the rocket to the projectiles array.
         projectiles.push(rocket);
     } else if (currentWeapon === 2) {
-        // Create a vector storing the camera position for the ray start.
+        // Create a vector storing the muzzle position for the ray start.
         const start = new THREE.Vector3();
-        // Get the world position of the camera.
-        camera.getWorldPosition(start);
+        // Get the world position of the lightning barrel.
+        lightningBarrelMesh.getWorldPosition(start);
         // Create a vector storing the forward direction.
         const dir = new THREE.Vector3();
         // Get the camera's forward direction.
@@ -730,8 +730,12 @@ function createProjectile() {
         const beamMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff });
         // Create the beam mesh from the geometry and material.
         const beam = new THREE.Mesh(beamGeometry, beamMaterial);
-        // Rotate the beam to align with the camera direction.
-        beam.rotation.x = Math.PI / 2;
+        // Create a quaternion to align the beam with the direction.
+        const beamQuaternion = new THREE.Quaternion();
+        // Calculate the rotation from the y axis to the firing direction.
+        beamQuaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize());
+        // Apply the calculated rotation to the beam mesh.
+        beam.quaternion.copy(beamQuaternion);
         // Position the beam half way along its length in front of the player.
         beam.position.copy(start.clone().add(dir.clone().multiplyScalar(lightningRange / 2)));
         // Record the spawn time for removal.
