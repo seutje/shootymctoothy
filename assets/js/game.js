@@ -94,8 +94,8 @@ gunGroup.add(barrelMesh);
 const handleGeometry = new THREE.BoxGeometry(0.1, 0.3, 0.1);
 // Create a mesh for the handle using the same material.
 const handleMesh = new THREE.Mesh(handleGeometry, gunMaterial);
-// Position the handle below the barrel to form an upside down L.
-handleMesh.position.set(0.2, -0.45, -0.35);
+// Position the handle below the barrel to form an upside down L and shift it slightly right.
+handleMesh.position.set(0.25, -0.45, -0.35);
 // Add the handle mesh to the gun group.
 gunGroup.add(handleMesh);
 // Attach the gun group to the camera so it follows the view.
