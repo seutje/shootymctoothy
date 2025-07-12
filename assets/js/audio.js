@@ -135,6 +135,32 @@ function playShootSound() {
     oscillator.stop(audioContext.currentTime + 0.2);
 }
 
+// The function to play the jump sound effect.
+function playJumpSound() {
+    // Create an oscillator for the jump blip.
+    const oscillator = audioContext.createOscillator();
+    // Create a gain node to shape the volume envelope.
+    const gainNode = audioContext.createGain();
+    // Use a sine wave for a soft tone.
+    oscillator.type = 'sine';
+    // Start the frequency high for a quick chirp.
+    oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+    // Sweep the frequency downward rapidly.
+    oscillator.frequency.exponentialRampToValueAtTime(400, audioContext.currentTime + 0.2);
+    // Set the initial gain level.
+    gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+    // Fade the gain out quickly.
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+    // Connect the oscillator to the gain node.
+    oscillator.connect(gainNode);
+    // Connect the gain node to the master volume control.
+    gainNode.connect(masterGain);
+    // Start the oscillator immediately.
+    oscillator.start();
+    // Stop the oscillator after the short ramp.
+    oscillator.stop(audioContext.currentTime + 0.2);
+}
+
 // The function to play the health pack pickup sound.
 function playHealthPackSound() {
     // Create an oscillator for the pickup chirp.

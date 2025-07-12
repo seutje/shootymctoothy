@@ -356,6 +356,11 @@ function onKeyDown(event) {
             verticalVelocity = jumpSpeed;
             // Mark that the player is no longer on the ground.
             isGrounded = false;
+            // Play the jump sound effect only after player interaction.
+            if (!autoplay) {
+                // Call the function to play the jump sound.
+                playJumpSound();
+            }
         }
     }
     // Check if the "p" key was pressed.
@@ -1087,4 +1092,3 @@ function startGame() {
         enemy.lastShotTime = Date.now();
     });
 }
-
