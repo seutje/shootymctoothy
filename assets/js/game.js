@@ -78,6 +78,8 @@ yawObject.add(camera);
 
 // Create a group to hold the gun parts.
 const gunGroup = new THREE.Group();
+// Move the entire gun slightly forward so it is in view.
+gunGroup.position.set(0, 0, -0.3);
 // Create a box geometry for the gun barrel.
 const barrelGeometry = new THREE.BoxGeometry(0.1, 0.1, 0.6);
 // Create a yellow material for the gun meshes.
