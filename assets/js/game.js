@@ -382,7 +382,7 @@ let isGrounded = true;
 
 // Track whether the left mouse button is held down.
 let isMouseDown = false;
-// Store the time when the last shot was fired.
+// Store the high-resolution time of the last shot.
 let lastPlayerShotTime = 0;
 // Define the minimum time between shots in milliseconds.
 const playerShotInterval = 200;
@@ -525,8 +525,8 @@ function onMouseDown(event) {
         isMouseDown = true;
         // Create a projectile immediately.
         createProjectile();
-        // Record the time of this shot.
-        lastPlayerShotTime = Date.now();
+        // Record the time of this shot using the high-resolution timer.
+        lastPlayerShotTime = performance.now();
     }
 }
 
