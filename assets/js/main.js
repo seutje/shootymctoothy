@@ -817,6 +817,25 @@ function animate(currentTime) {
             continue;
         }
 
+        // Check for collisions with enemy projectiles.
+        for (let k = enemyProjectiles.length - 1; k >= 0; k--) {
+            // Get the current enemy projectile.
+            const enemyProjectile = enemyProjectiles[k];
+            // Check if the projectile is close to the enemy projectile.
+            if (projectile.position.distanceTo(enemyProjectile.position) < 0.5) {
+                // Remove the player projectile from the scene.
+                scene.remove(projectile);
+                // Remove the player projectile from the array.
+                projectiles.splice(i, 1);
+                // Remove the enemy projectile from the scene.
+                scene.remove(enemyProjectile);
+                // Remove the enemy projectile from its array.
+                enemyProjectiles.splice(k, 1);
+                // Stop checking other enemy projectiles since this projectile is gone.
+                break;
+            }
+        }
+
         // Check for collisions with enemies.
         for (let j = enemies.length - 1; j >= 0; j--) {
             // Get the current enemy.
