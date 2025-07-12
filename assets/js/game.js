@@ -654,18 +654,37 @@ function updateAutoplayAI(currentTime) {
     let target = null;
     // Set the minimum distance to a large value.
     let minDist = Infinity;
+    // Store the nearest enemy even if out of sight.
+    let fallback = null;
+    // Store the distance to the fallback enemy.
+    let fallbackDist = Infinity;
     // Iterate over every enemy.
     enemies.forEach(enemy => {
         // Calculate the distance to this enemy.
         const dist = yawObject.position.distanceTo(enemy.position);
-        // Check if this enemy is closer than the current target.
-        if (dist < minDist) {
-            // Update the minimum distance.
-            minDist = dist;
-            // Set this enemy as the new target.
-            target = enemy;
+        // Update the fallback if this enemy is the closest so far.
+        if (dist < fallbackDist) {
+            // Set the fallback distance to this enemy's distance.
+            fallbackDist = dist;
+            // Set this enemy as the new fallback.
+            fallback = enemy;
+        }
+        // Check if the enemy is visible without obstacles.
+        if (hasLineOfSight(yawObject.position, enemy.position)) {
+            // Check if this enemy is closer than the current target.
+            if (dist < minDist) {
+                // Set the minimum distance to this enemy's distance.
+                minDist = dist;
+                // Set this enemy as the new target.
+                target = enemy;
+            }
         }
     });
+    // Use the fallback when no enemy is visible.
+    if (!target) {
+        // Assign the fallback enemy as the target.
+        target = fallback;
+    }
     // Aim at the target if one exists.
     if (target) {
         // Create a vector from the player to the target.
