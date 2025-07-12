@@ -769,6 +769,8 @@ function animate(currentTime) {
             enemyProjectiles.splice(i, 1);
             // Decrease player health.
             health -= 10;
+            // Play the damage sound effect.
+            playDamageSound();
             // Check if player is dead.
             if (health <= 0) {
                 // Determine if the current score qualifies for the high score list.

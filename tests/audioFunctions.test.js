@@ -10,6 +10,10 @@ test('playHealthPackSound function is defined', () => {
   expect(audioCode).toMatch(/function playHealthPackSound\(\)/);
 });
 
+test('playDamageSound function is defined', () => {
+  expect(audioCode).toMatch(/function playDamageSound\(\)/);
+});
+
 test('startSoundtrack function is defined', () => {
   expect(audioCode).toMatch(/function startSoundtrack\(\)/);
 });
