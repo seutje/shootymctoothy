@@ -199,6 +199,8 @@ let killCount = 0;
 const healthPacks = [];
 // Duration before a health pack disappears in milliseconds.
 const healthPackDuration = 30000;
+// Distance within which a health pack can be collected.
+const healthPackPickupRadius = 1.5;
 // Create an offscreen canvas for rendering UI textures.
 const uiCanvas = document.createElement('canvas');
 // Set the width of the offscreen canvas.
@@ -812,7 +814,7 @@ function animate(currentTime) {
             continue;
         }
         // Check if the player is close enough to pick up the pack.
-        if (pack.position.distanceTo(yawObject.position) < 1) {
+        if (pack.position.distanceTo(yawObject.position) < healthPackPickupRadius) {
             // Remove the pack from the scene.
             scene.remove(pack);
             // Remove the pack from the array.
