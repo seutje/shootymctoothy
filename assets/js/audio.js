@@ -161,6 +161,32 @@ function playHealthPackSound() {
     oscillator.stop(audioContext.currentTime + 0.2);
 }
 
+// The function to play the damage sound.
+function playDamageSound() {
+    // Create an oscillator for the hurt tone.
+    const oscillator = audioContext.createOscillator();
+    // Create a gain node for volume control.
+    const gainNode = audioContext.createGain();
+    // Use a sawtooth wave for a harsh sound.
+    oscillator.type = 'sawtooth';
+    // Start the frequency high to grab attention.
+    oscillator.frequency.setValueAtTime(600, audioContext.currentTime);
+    // Sweep the frequency downward quickly.
+    oscillator.frequency.exponentialRampToValueAtTime(300, audioContext.currentTime + 0.2);
+    // Set the initial volume of the sound.
+    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+    // Fade the volume out rapidly.
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+    // Connect the oscillator to the gain node.
+    oscillator.connect(gainNode);
+    // Connect the gain node to the master volume control.
+    gainNode.connect(masterGain);
+    // Start the oscillator immediately.
+    oscillator.start();
+    // Stop the oscillator after the ramp.
+    oscillator.stop(audioContext.currentTime + 0.2);
+}
+
 // The function to start the soundtrack.
 function startSoundtrack() {
     // Resume the audio context if it is suspended.
