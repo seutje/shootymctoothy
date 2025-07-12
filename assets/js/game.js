@@ -76,6 +76,15 @@ scene.add(yawObject);
 // Add the camera to the yaw object.
 yawObject.add(camera);
 
+// Store the world width for obstacle placement calculations.
+const worldWidth = 500;
+// Store the world depth for obstacle placement calculations.
+const worldDepth = 500;
+// Define the size of each obstacle for coverage checks.
+const obstacleSize = 5;
+// Define the maximum fraction of the world that obstacles may occupy.
+const maxObstacleCoverage = 0.4;
+
 // Create a texture object that will hold the obstacle texture.
 const obstacleTexture = new THREE.Texture();
 // Create an image element to load the obstacle texture.
@@ -109,12 +118,40 @@ function createObstacle(x, z) {
     // Add the obstacle to the obstacles array.
     obstacles.push(obstacle);
 }
-// Create several obstacles at fixed positions.
-createObstacle(10, 10);
-createObstacle(-10, -10);
-createObstacle(15, -15);
-createObstacle(-15, 15);
-createObstacle(10, 0);
+// Function to spawn multiple obstacles at random positions.
+function spawnRandomObstacles(desiredCount) {
+    // Calculate the total area of the world.
+    const worldArea = worldWidth * worldDepth;
+    // Calculate the area of a single obstacle.
+    const singleArea = obstacleSize * obstacleSize;
+    // Determine the maximum obstacle count allowed by the coverage limit.
+    const maxCount = Math.floor(worldArea * maxObstacleCoverage / singleArea);
+    // Determine how many obstacles will actually be created.
+    const targetCount = Math.min(desiredCount, maxCount);
+    // Track how many placement attempts have been made.
+    let attempts = 0;
+    // Continue until the obstacle array reaches the target count.
+    while (obstacles.length < targetCount && attempts < targetCount * 10) {
+        // Generate a random x position within the world bounds.
+        const x = (Math.random() - 0.5) * worldWidth;
+        // Generate a random z position within the world bounds.
+        const z = (Math.random() - 0.5) * worldDepth;
+        // Check for collisions with existing obstacles.
+        if (collidesWithObstacles(new THREE.Vector3(x, 0, z), obstacleSize / 2)) {
+            // Increase the attempt counter when the spot is invalid.
+            attempts++;
+            // Skip to the next iteration to try another location.
+            continue;
+        }
+        // Create the obstacle at the chosen position.
+        createObstacle(x, z);
+        // Increase the attempt counter after successful placement.
+        attempts++;
+    }
+}
+
+// Spawn fifty obstacles at random positions.
+spawnRandomObstacles(50);
 
 // Function to check if a position collides with obstacles.
 function collidesWithObstacles(position, radius) {
