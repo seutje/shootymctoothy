@@ -257,6 +257,12 @@ let score = 0;
 let health = 100;
 // Track how many enemies have been killed.
 let killCount = 0;
+// Define the starting number of enemies.
+const initialEnemyCount = 10;
+// Record the time when the game begins.
+let gameStartTime = Date.now();
+// Store the last time enemy spawns were checked.
+let lastSpawnCheck = Date.now();
 // Create an array to store health pack objects.
 const healthPacks = [];
 // Duration before a health pack disappears in milliseconds.
@@ -659,10 +665,32 @@ function createEnemy() {
     enemies.push(enemy);
 }
 
-// Create 10 enemies.
-for (let i = 0; i < 10; i++) {
+// Create the initial number of enemies.
+for (let i = 0; i < initialEnemyCount; i++) {
     // Create an enemy.
     createEnemy();
+}
+
+// Function to adjust the number of enemies over time.
+function updateEnemySpawn() {
+    // Get the current time.
+    const now = Date.now();
+    // Check if one second has passed since the last update.
+    if (now - lastSpawnCheck >= 1000) {
+        // Calculate the elapsed time in minutes.
+        const minutesElapsed = (now - gameStartTime) / 60000;
+        // Determine how many enemies should exist now.
+        const targetCount = Math.floor(initialEnemyCount * Math.pow(2, minutesElapsed));
+        // Calculate how many new enemies must be created.
+        const needed = targetCount - enemies.length;
+        // Spawn additional enemies when needed.
+        for (let i = 0; i < needed; i++) {
+            // Create a new enemy.
+            createEnemy();
+        }
+        // Record the time of this spawn update.
+        lastSpawnCheck = now;
+    }
 }
 
 
@@ -708,6 +736,9 @@ function animate(currentTime) {
         // Call the AI update function with the current time.
         updateAutoplayAI(currentTime);
     }
+
+    // Increase the number of enemies gradually over time.
+    updateEnemySpawn();
 
     // Reset the input velocity vector.
     inputVelocity.set(0, 0, 0);
@@ -1144,8 +1175,12 @@ function resetGameState() {
     });
     // Clear the health packs array.
     healthPacks.length = 0;
-    // Create ten new enemies.
-    for (let i = 0; i < 10; i++) {
+    // Reset the game start time for spawn scaling.
+    gameStartTime = Date.now();
+    // Reset the spawn check timer.
+    lastSpawnCheck = gameStartTime;
+    // Create the starting number of enemies.
+    for (let i = 0; i < initialEnemyCount; i++) {
         // Create a new enemy.
         createEnemy();
     }
