@@ -193,6 +193,12 @@ function displayHighScores() {
 let score = 0;
 // Initialize player health.
 let health = 100;
+// Track how many enemies have been killed.
+let killCount = 0;
+// Create an array to store health pack objects.
+const healthPacks = [];
+// Duration before a health pack disappears in milliseconds.
+const healthPackDuration = 30000;
 // Create an offscreen canvas for rendering UI textures.
 const uiCanvas = document.createElement('canvas');
 // Set the width of the offscreen canvas.
@@ -464,6 +470,26 @@ function createEnemyProjectile(enemy) {
     enemyProjectiles.push(projectile);
 }
 
+// Function to create a health pack at a given position.
+function createHealthPack(position) {
+    // Create a sphere geometry for the health pack.
+    const packGeometry = new THREE.SphereGeometry(0.5, 16, 16);
+    // Create a red material for the health pack.
+    const packMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+    // Create a mesh from the geometry and material.
+    const pack = new THREE.Mesh(packGeometry, packMaterial);
+    // Store the base y position for bobbing.
+    pack.baseY = position.y;
+    // Copy the provided position to the mesh.
+    pack.position.copy(position);
+    // Save the spawn time for expiration checks.
+    pack.spawnTime = Date.now();
+    // Add the health pack mesh to the scene.
+    scene.add(pack);
+    // Add the health pack to the health packs array.
+    healthPacks.push(pack);
+}
+
 // The function to find a valid spawn position for an enemy.
 function findEnemySpawnPosition() {
     // Track how many attempts have been made.
@@ -692,6 +718,8 @@ function animate(currentTime) {
                 scene.remove(projectile);
                 // Remove the projectile from the array.
                 projectiles.splice(i, 1);
+                // Store the enemy position for item drops.
+                const dropPos = enemy.position.clone();
                 // Respawn the enemy.
                 const respawn = findEnemySpawnPosition();
                 // Set the enemy's x position.
@@ -702,6 +730,13 @@ function animate(currentTime) {
                 enemy.position.y = respawn.y;
                 // Increment the score.
                 score += 10;
+                // Increment the kill count.
+                killCount++;
+                // Check if a health pack should be dropped.
+                if (killCount % 3 === 0) {
+                    // Create a health pack at the drop position.
+                    createHealthPack(dropPos);
+                }
                 // Break the inner loop since the projectile is gone.
                 break;
             }
@@ -758,6 +793,34 @@ function animate(currentTime) {
                 // Release the mouse pointer.
                 document.exitPointerLock();
             }
+        }
+    }
+
+    // Update the position of each health pack.
+    for (let i = healthPacks.length - 1; i >= 0; i--) {
+        // Get the current health pack.
+        const pack = healthPacks[i];
+        // Bob the pack up and down over time.
+        pack.position.y = pack.baseY + Math.sin(Date.now() / 500) * 0.25;
+        // Remove the pack if it has been active too long.
+        if (Date.now() - pack.spawnTime > healthPackDuration) {
+            // Remove the pack from the scene.
+            scene.remove(pack);
+            // Remove the pack from the array.
+            healthPacks.splice(i, 1);
+            // Continue to the next pack.
+            continue;
+        }
+        // Check if the player is close enough to pick up the pack.
+        if (pack.position.distanceTo(yawObject.position) < 1) {
+            // Remove the pack from the scene.
+            scene.remove(pack);
+            // Remove the pack from the array.
+            healthPacks.splice(i, 1);
+            // Restore the player's health by fifty points.
+            health = Math.min(health + 50, 100);
+            // Continue to the next pack.
+            continue;
         }
     }
 
