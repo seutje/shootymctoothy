@@ -318,7 +318,7 @@ const healthPacks = [];
 // Duration before a health pack disappears in milliseconds.
 const healthPackDuration = 30000;
 // Distance within which a health pack can be collected.
-const healthPackPickupRadius = 1.5;
+const healthPackPickupRadius = 3;
 // Create an offscreen canvas for rendering UI textures.
 const uiCanvas = document.createElement('canvas');
 // Set the width of the offscreen canvas.
