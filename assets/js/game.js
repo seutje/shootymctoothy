@@ -678,7 +678,7 @@ function animate(currentTime) {
     }
 
     // Apply ground or air movement based on whether the player is grounded.
-    if (isGrounded && airGraceTime === 0) {
+    if (isGrounded && airGraceTime <= 0) { // Use ground movement after grace timer expires
         // Copy the input velocity directly when on the ground.
         horizontalVelocity.copy(velocity);
     }
