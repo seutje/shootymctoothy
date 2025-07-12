@@ -1037,6 +1037,13 @@ function resetGameState() {
     });
     // Clear the enemy projectiles array.
     enemyProjectiles.length = 0;
+    // Remove all existing health packs from the scene.
+    healthPacks.forEach(pack => {
+        // Remove this health pack from the scene graph.
+        scene.remove(pack);
+    });
+    // Clear the health packs array.
+    healthPacks.length = 0;
     // Create ten new enemies.
     for (let i = 0; i < 10; i++) {
         // Create a new enemy.
