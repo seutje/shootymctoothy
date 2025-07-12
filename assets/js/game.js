@@ -78,8 +78,10 @@ yawObject.add(camera);
 
 // Create a group to hold the gun parts.
 const gunGroup = new THREE.Group();
+// Store the base position of the gun for bobbing calculations.
+const gunBasePosition = new THREE.Vector3(0, 0, -0.3);
 // Move the entire gun slightly forward so it is in view.
-gunGroup.position.set(0, 0, -0.3);
+gunGroup.position.copy(gunBasePosition);
 // Create a box geometry for the gun barrel.
 const barrelGeometry = new THREE.BoxGeometry(0.1, 0.1, 0.6);
 // Create a yellow material for the gun meshes.
@@ -386,6 +388,16 @@ let isMouseDown = false;
 let lastPlayerShotTime = 0;
 // Define the minimum time between shots in milliseconds.
 const playerShotInterval = 100;
+// Define how far the gun moves up and down when bobbing.
+const gunBobAmplitude = 0.05;
+// Define how quickly the bobbing motion slows down.
+const gunBobDamping = 0.9;
+// Track the current vertical bobbing offset.
+let gunBobOffset = 0;
+// Track the gun tilt around the x axis when moving the mouse.
+let gunTiltX = 0;
+// Track the gun tilt around the y axis when moving the mouse.
+let gunTiltY = 0;
 
 // Add an event listener for mouse movement to control the camera.
 document.addEventListener('mousemove', onMouseMove, false);
@@ -475,6 +487,10 @@ function onMouseMove(event) {
         camera.rotation.x -= event.movementY * mouseSpeed;
         // Clamp the camera's x rotation to prevent flipping.
         camera.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, camera.rotation.x));
+        // Tilt the gun group horizontally in response to mouse movement.
+        gunTiltY -= event.movementX * mouseSpeed * 0.5;
+        // Tilt the gun group vertically in response to mouse movement.
+        gunTiltX -= event.movementY * mouseSpeed * 0.5;
     }
 }
 
@@ -911,6 +927,22 @@ function animate(currentTime) {
         // Mark the player as grounded.
         isGrounded = true;
     }
+    // Increase bobbing when the player is airborne.
+    if (!isGrounded) {
+        // Calculate a bobbing offset using the current time.
+        gunBobOffset = Math.sin(Date.now() * 0.02) * gunBobAmplitude;
+    } else {
+        // Reduce the bobbing offset gradually when grounded.
+        gunBobOffset *= gunBobDamping;
+    }
+    // Apply the vertical bobbing offset to the gun position.
+    gunGroup.position.y = gunBasePosition.y + gunBobOffset;
+    // Gradually return the gun tilt on the x axis to zero.
+    gunTiltX *= 0.9;
+    // Gradually return the gun tilt on the y axis to zero.
+    gunTiltY *= 0.9;
+    // Apply the gun tilt rotations for weaving effect.
+    gunGroup.rotation.set(gunTiltX, gunTiltY, 0);
 
     // Update the position of each projectile.
     for (let i = projectiles.length - 1; i >= 0; i--) {
