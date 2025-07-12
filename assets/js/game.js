@@ -627,14 +627,18 @@ function createProjectile() {
         const rocketMaterialMesh = new THREE.MeshBasicMaterial({ color: 0xff0000 });
         // Create a mesh for the rocket projectile.
         const rocket = new THREE.Mesh(rocketGeometry, rocketMaterialMesh);
-        // Rotate the rocket so it flies forward.
-        rocket.rotation.x = Math.PI / 2;
         // Set the rocket position to the camera position.
         camera.getWorldPosition(rocket.position);
-        // Get the camera direction.
+        // Create a vector to store the direction of the rocket.
         const rocketDirection = new THREE.Vector3();
         // Get the forward direction from the camera.
         camera.getWorldDirection(rocketDirection);
+        // Create a quaternion for orienting the rocket.
+        const rocketQuaternion = new THREE.Quaternion();
+        // Calculate the rotation needed so the rocket faces the direction.
+        rocketQuaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), rocketDirection.clone().normalize());
+        // Apply the rotation to the rocket mesh.
+        rocket.quaternion.copy(rocketQuaternion);
         // Set the rocket velocity to move slowly.
         rocket.velocity = rocketDirection.multiplyScalar(0.5);
         // Mark this projectile as a rocket.
