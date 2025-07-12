@@ -769,6 +769,11 @@ function animate(currentTime) {
         }
     }
 
+    // Clamp the player's x position within the ground boundaries.
+    yawObject.position.x = Math.max(-250, Math.min(250, yawObject.position.x));
+    // Clamp the player's z position within the ground boundaries.
+    yawObject.position.z = Math.max(-250, Math.min(250, yawObject.position.z));
+
     // Apply gravity to the vertical velocity.
     verticalVelocity += gravity;
     // Add the vertical velocity to the player's y position.
@@ -791,6 +796,16 @@ function animate(currentTime) {
         projectile.position.add(projectile.velocity);
         // Remove the projectile if it hits an obstacle.
         if (collidesWithObstacles(projectile.position, 0.5)) {
+            // Remove the projectile mesh from the scene.
+            scene.remove(projectile);
+            // Remove the projectile from the projectiles array.
+            projectiles.splice(i, 1);
+            // Continue to the next projectile.
+            continue;
+        }
+
+        // Remove the projectile if it leaves the ground plane.
+        if (Math.abs(projectile.position.x) > 250 || Math.abs(projectile.position.z) > 250) {
             // Remove the projectile mesh from the scene.
             scene.remove(projectile);
             // Remove the projectile from the projectiles array.
@@ -861,6 +876,16 @@ function animate(currentTime) {
         projectile.position.add(projectile.velocity);
         // Remove the projectile if it hits an obstacle.
         if (collidesWithObstacles(projectile.position, 0.5)) {
+            // Remove the projectile mesh from the scene.
+            scene.remove(projectile);
+            // Remove the projectile from the enemy projectiles array.
+            enemyProjectiles.splice(i, 1);
+            // Continue to the next projectile.
+            continue;
+        }
+
+        // Remove the enemy projectile if it leaves the ground plane.
+        if (Math.abs(projectile.position.x) > 250 || Math.abs(projectile.position.z) > 250) {
             // Remove the projectile mesh from the scene.
             scene.remove(projectile);
             // Remove the projectile from the enemy projectiles array.
