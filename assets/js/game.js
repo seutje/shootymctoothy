@@ -266,7 +266,7 @@ const velocity = new THREE.Vector3();
 // Create a new vector to store the player's horizontal velocity.
 const horizontalVelocity = new THREE.Vector3();
 // Define the acceleration added when strafejumping in the air.
-const airAcceleration = 0.1;
+const airAcceleration = 0.05;
 // Define the maximum speed the player can reach while airborne.
 const maxAirSpeed = moveSpeed * 3;
 
@@ -280,6 +280,10 @@ const jumpSpeed = 0.2;
 const groundLevel = 2;
 // Track whether the player is currently on the ground.
 let isGrounded = true;
+// Store the remaining time of the landing grace period.
+let airGraceTime = 0;
+// Track the timestamp of the previous frame.
+let previousTime = 0;
 
 
 // Add an event listener for mouse movement to control the camera.
@@ -621,6 +625,26 @@ function animate(currentTime) {
         return;
     }
 
+    // Ensure the previous time is initialized.
+    if (previousTime === 0) {
+        // Set the previous time to the current time.
+        previousTime = currentTime;
+    }
+    // Calculate the time passed since the last frame.
+    const deltaTime = (currentTime - previousTime) / 1000;
+    // Update the previous time for the next frame.
+    previousTime = currentTime;
+    // Reduce the remaining grace time.
+    if (airGraceTime > 0) {
+        // Subtract the delta time from the grace timer.
+        airGraceTime -= deltaTime;
+        // Clamp the grace timer so it never goes below zero.
+        if (airGraceTime < 0) {
+            // Reset the grace timer when it runs out.
+            airGraceTime = 0;
+        }
+    }
+
     // Stop any previous movement.
     velocity.set(0, 0, 0);
 
@@ -654,7 +678,7 @@ function animate(currentTime) {
     }
 
     // Apply ground or air movement based on whether the player is grounded.
-    if (isGrounded) {
+    if (isGrounded && airGraceTime === 0) {
         // Copy the input velocity directly when on the ground.
         horizontalVelocity.copy(velocity);
     }
@@ -691,6 +715,8 @@ function animate(currentTime) {
         verticalVelocity = 0;
         // Mark the player as grounded.
         isGrounded = true;
+        // Start the landing grace period.
+        airGraceTime = 0.1;
     }
 
     // Update the position of each projectile.
