@@ -83,8 +83,8 @@ function updateAutoplayAI(currentTime) {
         const horiz = Math.sqrt(dir.x * dir.x + dir.z * dir.z);
         // Calculate the pitch angle toward the predicted position.
         const pitch = Math.atan2(predicted.y - yawObject.position.y, horiz);
-        // Set the camera vertical rotation to aim at the predicted position.
-        camera.rotation.x = -pitch;
+        // Set the camera vertical rotation using the pitch value.
+        camera.rotation.x = pitch;
         // Fire a shot periodically when there is a clear path.
         if (currentTime > aiShootTime) {
             // Check if the player can see the predicted position without obstacles.
