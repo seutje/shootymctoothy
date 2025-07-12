@@ -3,9 +3,13 @@
   "version": "1.0.0",
   "description": "ShootyMcToothy browser-based 3D shooter game",
   "scripts": {
-    "test": "jest"
+    "test": "jest",
+    "start": "node server.js"
   },
   "devDependencies": {
     "jest": "^29.7.0"
+  },
+  "dependencies": {
+    "express": "^5.1.0"
   }
 }
