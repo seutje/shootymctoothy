@@ -103,6 +103,27 @@ gunGroup.add(handleMesh);
 // Attach the gun group to the camera so it follows the view.
 camera.add(gunGroup);
 
+// Create a group to hold the rocket launcher parts.
+const rocketGroup = new THREE.Group();
+// Move the rocket launcher slightly forward using the same base position.
+rocketGroup.position.copy(gunBasePosition);
+// Create a cylinder geometry for the launcher barrel.
+const rocketBarrelGeometry = new THREE.CylinderGeometry(0.1, 0.1, 0.6, 16);
+// Create a red material for the launcher meshes.
+const rocketMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+// Create a mesh for the launcher barrel.
+const rocketBarrelMesh = new THREE.Mesh(rocketBarrelGeometry, rocketMaterial);
+// Rotate the barrel so it points forward along the z axis.
+rocketBarrelMesh.rotation.x = Math.PI / 2;
+// Position the rocket barrel in front of the camera.
+rocketBarrelMesh.position.set(0.2, -0.2, -0.5);
+// Add the barrel mesh to the rocket launcher group.
+rocketGroup.add(rocketBarrelMesh);
+// Hide the rocket launcher until selected.
+rocketGroup.visible = false;
+// Attach the rocket launcher group to the camera.
+camera.add(rocketGroup);
+
 // Store the world width for obstacle placement calculations.
 const worldWidth = 500;
 // Store the world depth for obstacle placement calculations.
@@ -230,6 +251,8 @@ const enemies = [];
 const projectiles = [];
 // Create an array to store enemy projectile objects.
 const enemyProjectiles = [];
+// Create an array to store explosion meshes.
+const explosions = [];
 
 // Create a texture object that will hold the enemy texture.
 const enemyTexture = new THREE.Texture();
@@ -386,8 +409,12 @@ let isGrounded = true;
 let isMouseDown = false;
 // Store the high-resolution time of the last shot.
 let lastPlayerShotTime = 0;
-// Define the minimum time between shots in milliseconds.
-const playerShotInterval = 100;
+// Variable storing the current interval between shots.
+let playerShotInterval = 100;
+// Constant interval for the basic gun.
+const gunShotInterval = 100;
+// Constant interval for the rocket launcher.
+const rocketShotInterval = 800;
 // Define how far the gun moves up and down when bobbing.
 const gunBobAmplitude = 0.05;
 // Define how quickly the bobbing motion slows down.
@@ -398,6 +425,8 @@ let gunBobOffset = 0;
 let gunTiltX = 0;
 // Track the gun tilt around the y axis when moving the mouse.
 let gunTiltY = 0;
+// Track the index of the current weapon.
+let currentWeapon = 0;
 
 // Add an event listener for mouse movement to control the camera.
 document.addEventListener('mousemove', onMouseMove, false);
@@ -411,6 +440,8 @@ document.addEventListener('keydown', onKeyDown, false);
 document.addEventListener('keyup', onKeyUp, false);
 // Add an event listener for window resize events.
 window.addEventListener('resize', onWindowResize, false);
+// Add an event listener for the mouse wheel to switch weapons.
+document.addEventListener('wheel', onMouseWheel, false);
 
 // A map to store the state of the keys.
 const keys = {};
@@ -571,26 +602,69 @@ function onWindowResize() {
     updateUIScale();
 }
 
+// The function to handle mouse wheel events.
+function onMouseWheel(event) {
+    // Swap weapons when the wheel moves up or down.
+    if (event.deltaY !== 0) {
+        // Toggle the current weapon index between zero and one.
+        currentWeapon = currentWeapon === 0 ? 1 : 0;
+        // Set the interval based on the selected weapon.
+        playerShotInterval = currentWeapon === 0 ? gunShotInterval : rocketShotInterval;
+        // Show the gun model when using the basic weapon.
+        gunGroup.visible = currentWeapon === 0;
+        // Show the rocket launcher model when selected.
+        rocketGroup.visible = currentWeapon === 1;
+    }
+}
+
 // The function to create a projectile.
 function createProjectile() {
-    // Create a small box geometry for the projectile.
-    const projectileGeometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
-    // Create a yellow material for the projectile.
-    const projectileMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
-    // Create a mesh from the projectile geometry and material.
-    const projectile = new THREE.Mesh(projectileGeometry, projectileMaterial);
-    // Set the projectile's initial position to the camera's world position.
-    camera.getWorldPosition(projectile.position);
-    // Get the camera's direction.
-    const projectileDirection = new THREE.Vector3();
-    // Get the camera's world direction.
-    camera.getWorldDirection(projectileDirection);
-    // Set the projectile's velocity.
-    projectile.velocity = projectileDirection.multiplyScalar(1);
-    // Add the projectile to the scene.
-    scene.add(projectile);
-    // Add the projectile to the projectiles array.
-    projectiles.push(projectile);
+    // Check if the current weapon is the rocket launcher.
+    if (currentWeapon === 1) {
+        // Create a cylinder geometry for the rocket.
+        const rocketGeometry = new THREE.CylinderGeometry(0.15, 0.15, 0.4, 8);
+        // Create a red material for the rocket.
+        const rocketMaterialMesh = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+        // Create a mesh for the rocket projectile.
+        const rocket = new THREE.Mesh(rocketGeometry, rocketMaterialMesh);
+        // Rotate the rocket so it flies forward.
+        rocket.rotation.x = Math.PI / 2;
+        // Set the rocket position to the camera position.
+        camera.getWorldPosition(rocket.position);
+        // Get the camera direction.
+        const rocketDirection = new THREE.Vector3();
+        // Get the forward direction from the camera.
+        camera.getWorldDirection(rocketDirection);
+        // Set the rocket velocity to move slowly.
+        rocket.velocity = rocketDirection.multiplyScalar(0.5);
+        // Mark this projectile as a rocket.
+        rocket.isRocket = true;
+        // Add the rocket to the scene.
+        scene.add(rocket);
+        // Add the rocket to the projectiles array.
+        projectiles.push(rocket);
+    } else {
+        // Create a small box geometry for the bullet.
+        const projectileGeometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
+        // Create a yellow material for the bullet.
+        const projectileMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+        // Create a mesh for the bullet projectile.
+        const projectile = new THREE.Mesh(projectileGeometry, projectileMaterial);
+        // Set the bullet position to the camera position.
+        camera.getWorldPosition(projectile.position);
+        // Get the camera direction.
+        const projectileDirection = new THREE.Vector3();
+        // Get the forward direction from the camera.
+        camera.getWorldDirection(projectileDirection);
+        // Set the bullet velocity.
+        projectile.velocity = projectileDirection.multiplyScalar(1);
+        // Mark this projectile as a bullet.
+        projectile.isRocket = false;
+        // Add the bullet to the scene.
+        scene.add(projectile);
+        // Add the bullet to the projectiles array.
+        projectiles.push(projectile);
+    }
     // Play the shooting sound effect only after player interaction.
     if (!autoplay) {
         // Call the function to play the shooting sound.
@@ -640,6 +714,56 @@ function createHealthPack(position) {
     scene.add(pack);
     // Add the health pack to the health packs array.
     healthPacks.push(pack);
+}
+
+// Function to handle rocket explosions at a position.
+function explodeRocket(position) {
+    // Create a small sphere geometry for the explosion effect.
+    const explosionGeometry = new THREE.SphereGeometry(1, 8, 8);
+    // Create an orange material for the explosion.
+    const explosionMaterial = new THREE.MeshBasicMaterial({ color: 0xffaa00 });
+    // Create a mesh from the geometry and material.
+    const explosion = new THREE.Mesh(explosionGeometry, explosionMaterial);
+    // Set the explosion position to the provided coordinates.
+    explosion.position.copy(position);
+    // Record the spawn time for removal later.
+    explosion.spawnTime = Date.now();
+    // Add the explosion mesh to the scene.
+    scene.add(explosion);
+    // Add the explosion to the explosions array.
+    explosions.push(explosion);
+    // Check each enemy to apply splash damage.
+    for (let i = enemies.length - 1; i >= 0; i--) {
+        // Get the current enemy.
+        const enemy = enemies[i];
+        // Check if the enemy is within three units of the explosion.
+        if (enemy.position.distanceTo(position) < 3) {
+            // Store the enemy position for item drops.
+            const dropPos = enemy.position.clone();
+            // Respawn the enemy at a new location.
+            const respawn = findEnemySpawnPosition();
+            // Set the enemy's x position.
+            enemy.position.x = respawn.x;
+            // Set the enemy's z position.
+            enemy.position.z = respawn.z;
+            // Set the enemy's y position.
+            enemy.position.y = respawn.y;
+            // Increment the score for the kill.
+            score += 10;
+            // Increment the kill count.
+            killCount++;
+            // Drop a health pack every three kills.
+            if (killCount % 3 === 0) {
+                // Create a health pack at the drop position.
+                createHealthPack(dropPos);
+            }
+        }
+    }
+    // Apply splash damage to the player.
+    if (yawObject.position.distanceTo(position) < 3) {
+        // Reduce the player's health by twenty.
+        health -= 20;
+    }
 }
 
 // The function to find a valid spawn position for an enemy.
@@ -950,24 +1074,60 @@ function animate(currentTime) {
         const projectile = projectiles[i];
         // Update the projectile's position based on its velocity.
         projectile.position.add(projectile.velocity);
-        // Remove the projectile if it hits an obstacle.
-        if (collidesWithObstacles(projectile.position, 0.5)) {
-            // Remove the projectile mesh from the scene.
-            scene.remove(projectile);
-            // Remove the projectile from the projectiles array.
-            projectiles.splice(i, 1);
-            // Continue to the next projectile.
-            continue;
-        }
-
-        // Remove the projectile if it leaves the ground plane.
-        if (Math.abs(projectile.position.x) > 250 || Math.abs(projectile.position.z) > 250) {
-            // Remove the projectile mesh from the scene.
-            scene.remove(projectile);
-            // Remove the projectile from the projectiles array.
-            projectiles.splice(i, 1);
-            // Continue to the next projectile.
-            continue;
+        // Check if the projectile is a rocket.
+        if (projectile.isRocket) {
+            // Track whether the rocket should explode.
+            let explode = false;
+            // Explode when the rocket hits an obstacle.
+            if (collidesWithObstacles(projectile.position, 0.5)) {
+                // Mark the rocket for explosion.
+                explode = true;
+            }
+            // Explode when leaving the play area.
+            if (Math.abs(projectile.position.x) > 250 || Math.abs(projectile.position.z) > 250) {
+                // Mark the rocket for explosion.
+                explode = true;
+            }
+            // Check for direct hits on enemies.
+            for (let j = enemies.length - 1; j >= 0 && !explode; j--) {
+                // Get the current enemy.
+                const enemy = enemies[j];
+                // Check the distance between the rocket and the enemy.
+                if (projectile.position.distanceTo(enemy.position) < 1.5) {
+                    // Mark the rocket for explosion.
+                    explode = true;
+                }
+            }
+            // Detonate the rocket if needed.
+            if (explode) {
+                // Remove the rocket mesh from the scene.
+                scene.remove(projectile);
+                // Remove the rocket from the projectiles array.
+                projectiles.splice(i, 1);
+                // Create an explosion at the rocket position.
+                explodeRocket(projectile.position);
+                // Continue to the next projectile.
+                continue;
+            }
+        } else {
+            // Remove the projectile if it hits an obstacle.
+            if (collidesWithObstacles(projectile.position, 0.5)) {
+                // Remove the projectile mesh from the scene.
+                scene.remove(projectile);
+                // Remove the projectile from the projectiles array.
+                projectiles.splice(i, 1);
+                // Continue to the next projectile.
+                continue;
+            }
+            // Remove the projectile if it leaves the ground plane.
+            if (Math.abs(projectile.position.x) > 250 || Math.abs(projectile.position.z) > 250) {
+                // Remove the projectile mesh from the scene.
+                scene.remove(projectile);
+                // Remove the projectile from the projectiles array.
+                projectiles.splice(i, 1);
+                // Continue to the next projectile.
+                continue;
+            }
         }
 
         // Check for collisions with enemy projectiles.
@@ -1102,6 +1262,19 @@ function animate(currentTime) {
                     document.exitPointerLock();
                 }
             }
+        }
+    }
+
+    // Update each explosion and remove old ones.
+    for (let i = explosions.length - 1; i >= 0; i--) {
+        // Get the current explosion mesh.
+        const boom = explosions[i];
+        // Remove the explosion after three hundred milliseconds.
+        if (Date.now() - boom.spawnTime > 300) {
+            // Remove the explosion mesh from the scene.
+            scene.remove(boom);
+            // Remove the explosion from the array.
+            explosions.splice(i, 1);
         }
     }
 
@@ -1254,6 +1427,13 @@ function resetGameState() {
     });
     // Clear the enemy projectiles array.
     enemyProjectiles.length = 0;
+    // Remove all existing explosion meshes from the scene.
+    explosions.forEach(explosion => {
+        // Remove this explosion from the scene graph.
+        scene.remove(explosion);
+    });
+    // Clear the explosions array.
+    explosions.length = 0;
     // Remove all existing health packs from the scene.
     healthPacks.forEach(pack => {
         // Remove this health pack from the scene graph.
@@ -1261,6 +1441,13 @@ function resetGameState() {
     });
     // Clear the health packs array.
     healthPacks.length = 0;
+    // Reset to the basic gun weapon.
+    currentWeapon = 0;
+    // Set the shot interval for the gun.
+    playerShotInterval = gunShotInterval;
+    // Show the gun model and hide the rocket launcher.
+    gunGroup.visible = true;
+    rocketGroup.visible = false;
     // Reset the game start time for spawn scaling.
     gameStartTime = Date.now();
     // Reset the spawn check timer.
