@@ -382,6 +382,12 @@ const groundLevel = 2;
 // Track whether the player is currently on the ground.
 let isGrounded = true;
 
+// Track whether the left mouse button is held down.
+let isMouseDown = false;
+// Store the high-resolution time of the last shot.
+let lastPlayerShotTime = 0;
+// Define the minimum time between shots in milliseconds.
+const playerShotInterval = 100;
 // Define how far the gun moves up and down when bobbing.
 const gunBobAmplitude = 0.05;
 // Define how quickly the bobbing motion slows down.
@@ -393,11 +399,12 @@ let gunTiltX = 0;
 // Track the gun tilt around the y axis when moving the mouse.
 let gunTiltY = 0;
 
-
 // Add an event listener for mouse movement to control the camera.
 document.addEventListener('mousemove', onMouseMove, false);
 // Add an event listener for mouse clicks to fire projectiles.
 document.addEventListener('mousedown', onMouseDown, false);
+// Add an event listener for mouse release to stop firing.
+document.addEventListener('mouseup', onMouseUp, false);
 // Add an event listener for keydown events to control player movement.
 document.addEventListener('keydown', onKeyDown, false);
 // Add an event listener for keyup events to control player movement.
@@ -530,8 +537,21 @@ function onMouseDown(event) {
     document.body.requestPointerLock();
     // Check if the left mouse button was clicked.
     if (event.button === 0) {
-        // Create a projectile.
+        // Mark that the mouse button is held down.
+        isMouseDown = true;
+        // Create a projectile immediately.
         createProjectile();
+        // Record the time of this shot using the high-resolution timer.
+        lastPlayerShotTime = performance.now();
+    }
+}
+
+// The function to handle mouse up events.
+function onMouseUp(event) {
+    // Check if the left mouse button was released.
+    if (event.button === 0) {
+        // Clear the mouse button flag.
+        isMouseDown = false;
     }
 }
 
@@ -781,6 +801,14 @@ function animate(currentTime) {
 
     // Increase the number of enemies gradually over time.
     updateEnemySpawn();
+
+    // Fire repeatedly when the mouse is held down.
+    if (isMouseDown && currentTime - lastPlayerShotTime >= playerShotInterval) {
+        // Create another projectile.
+        createProjectile();
+        // Update the time of the last shot.
+        lastPlayerShotTime = currentTime;
+    }
 
     // Reset the input velocity vector.
     inputVelocity.set(0, 0, 0);
