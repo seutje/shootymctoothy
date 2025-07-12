@@ -196,8 +196,12 @@ function updateAutoplayAI(currentTime) {
         dir.subVectors(predicted, yawObject.position);
         // Calculate the desired yaw to face the predicted position.
         const desiredYaw = Math.atan2(-dir.x, -dir.z);
-        // Smoothly rotate the player toward the desired yaw.
-        yawObject.rotation.y += (desiredYaw - yawObject.rotation.y) * rotationSmoothing;
+        // Calculate the yaw difference between the current rotation and the desired rotation.
+        let deltaYaw = desiredYaw - yawObject.rotation.y;
+        // Wrap the yaw difference to the range negative pi to positive pi.
+        deltaYaw = Math.atan2(Math.sin(deltaYaw), Math.cos(deltaYaw));
+        // Smoothly rotate the player toward the desired yaw using the wrapped difference.
+        yawObject.rotation.y += deltaYaw * rotationSmoothing;
         // Calculate the horizontal distance to the predicted position.
         const horiz = Math.sqrt(dir.x * dir.x + dir.z * dir.z);
         // Calculate the desired pitch toward the predicted position.
