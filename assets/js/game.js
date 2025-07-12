@@ -279,8 +279,8 @@ let gameStarted = false;
 // Variable to store the animation frame ID.
 let animationFrameId;
 
-// Define the player's movement speed.
-const moveSpeed = 0.1;
+// Define the player's movement speed, increased for faster running.
+const moveSpeed = 0.15;
 // Define the player's mouse sensitivity.
 const mouseSpeed = 0.002;
 
