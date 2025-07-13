@@ -649,17 +649,17 @@ function onKeyDown(event) {
             togglePause();
         }
     }
-    // Check if the number keys were pressed.
-    if (event.key === '1') {
-        // Switch to the pistol when pressing one.
+    // Check if the number keys or azerty symbols were pressed.
+    if (event.key === '1' || event.key === '&') {
+        // Switch to the pistol when pressing one or ampersand.
         setWeapon(0);
     }
-    if (event.key === '2') {
-        // Switch to the rocket launcher when pressing two.
+    if (event.key === '2' || event.key === 'é') {
+        // Switch to the rocket launcher when pressing two or é.
         setWeapon(1);
     }
-    if (event.key === '3') {
-        // Switch to the lightning gun when pressing three.
+    if (event.key === '3' || event.key === '"') {
+        // Switch to the lightning gun when pressing three or double quote.
         setWeapon(2);
     }
 }
