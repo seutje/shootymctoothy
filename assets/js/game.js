@@ -503,6 +503,10 @@ let isGrounded = true;
 
 // Track whether the left mouse button is held down.
 let isMouseDown = false;
+// Store the previous x coordinate of the active touch.
+let lastTouchX = 0;
+// Store the previous y coordinate of the active touch.
+let lastTouchY = 0;
 // Store the high-resolution time of the last shot.
 let lastPlayerShotTime = 0;
 // Variable storing the current interval between shots.
@@ -559,6 +563,12 @@ document.addEventListener('mousemove', onMouseMove, false);
 document.addEventListener('mousedown', onMouseDown, false);
 // Add an event listener for mouse release to stop firing.
 document.addEventListener('mouseup', onMouseUp, false);
+// Add an event listener for touch start to mimic mouse down.
+document.addEventListener('touchstart', onTouchStart, false);
+// Add an event listener for touch move to mimic mouse movement.
+document.addEventListener('touchmove', onTouchMove, false);
+// Add an event listener for touch end to mimic mouse up.
+document.addEventListener('touchend', onTouchEnd, false);
 // Add an event listener for keydown events to control player movement.
 document.addEventListener('keydown', onKeyDown, false);
 // Add an event listener for keyup events to control player movement.
@@ -746,6 +756,52 @@ function onMouseUp(event) {
         // Clear the mouse button flag.
         isMouseDown = false;
     }
+}
+
+// The function to handle touch start events.
+function onTouchStart(event) {
+    // Prevent default browser behavior.
+    event.preventDefault();
+    // Get the first touch point from the event.
+    const touch = event.touches[0];
+    // Store the x coordinate of this touch.
+    lastTouchX = touch.clientX;
+    // Store the y coordinate of this touch.
+    lastTouchY = touch.clientY;
+    // Create an object mimicking a mouse event.
+    const mouseEvent = { button: 0, clientX: lastTouchX, clientY: lastTouchY };
+    // Forward the event to the mouse down handler.
+    onMouseDown(mouseEvent);
+}
+
+// The function to handle touch move events.
+function onTouchMove(event) {
+    // Prevent default browser behavior.
+    event.preventDefault();
+    // Get the first touch point from the event.
+    const touch = event.touches[0];
+    // Calculate the change in x since the last touch.
+    const movementX = touch.clientX - lastTouchX;
+    // Calculate the change in y since the last touch.
+    const movementY = touch.clientY - lastTouchY;
+    // Update the stored x coordinate.
+    lastTouchX = touch.clientX;
+    // Update the stored y coordinate.
+    lastTouchY = touch.clientY;
+    // Create an object mimicking a mouse move event.
+    const moveEvent = { movementX: movementX, movementY: movementY };
+    // Forward the event to the mouse move handler.
+    onMouseMove(moveEvent);
+}
+
+// The function to handle touch end events.
+function onTouchEnd(event) {
+    // Prevent default browser behavior.
+    event.preventDefault();
+    // Create an object mimicking a mouse up event.
+    const mouseEvent = { button: 0 };
+    // Forward the event to the mouse up handler.
+    onMouseUp(mouseEvent);
 }
 
 // The function to handle window resize events.
