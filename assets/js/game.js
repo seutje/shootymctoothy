@@ -396,6 +396,10 @@ let gameOver = false;
 let gameStarted = false;
 // Variable to store the animation frame ID.
 let animationFrameId;
+// Variable to track if the browser tab is visible.
+let tabVisible = true;
+// Variable to store when the tab became hidden.
+let hiddenStartTime = 0;
 
 // Define the player's movement speed, increased for faster running.
 const moveSpeed = 0.15;
@@ -467,6 +471,25 @@ document.addEventListener('keydown', onKeyDown, false);
 document.addEventListener('keyup', onKeyUp, false);
 // Add an event listener for window resize events.
 window.addEventListener('resize', onWindowResize, false);
+// Add an event listener for tab visibility changes.
+document.addEventListener('visibilitychange', () => {
+    // Check if the document has become hidden.
+    if (document.hidden) {
+        // Record the time when the tab was hidden.
+        hiddenStartTime = Date.now();
+        // Mark the tab as not visible.
+        tabVisible = false;
+    } else {
+        // Calculate how long the tab was hidden.
+        const hiddenDuration = Date.now() - hiddenStartTime;
+        // Offset the game start time by the hidden duration.
+        gameStartTime += hiddenDuration;
+        // Offset the last spawn check time by the hidden duration.
+        lastSpawnCheck += hiddenDuration;
+        // Mark the tab as visible again.
+        tabVisible = true;
+    }
+}, false);
 // Add an event listener for the mouse wheel to switch weapons.
 document.addEventListener('wheel', onMouseWheel, false);
 
@@ -980,6 +1003,13 @@ for (let i = 0; i < initialEnemyCount; i++) {
 
 // Function to adjust the number of enemies over time.
 function updateEnemySpawn() {
+    // Do not spawn enemies when the tab is not visible.
+    if (!tabVisible) {
+        // Reset the spawn check timer to avoid catch up spawns.
+        lastSpawnCheck = Date.now();
+        // Exit early because spawning is paused.
+        return;
+    }
     // Get the current time.
     const now = Date.now();
     // Check if one second has passed since the last update.
@@ -1038,8 +1068,8 @@ function animate(currentTime) {
         return;
     }
 
-    // Update the AI controller during autoplay mode.
-    if (autoplay) {
+    // Update the AI controller when autoplay is active and the tab is visible.
+    if (autoplay && tabVisible) {
         // Call the AI update function with the current time.
         updateAutoplayAI(currentTime);
     }
