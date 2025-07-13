@@ -5,6 +5,7 @@ ShootyMcToothy is a browser-based 3D shooter built with Three.js. The game runs 
 ## Features
 
 - Simple first-person controls using the mouse and the WASD keys.
+- Touch controls enable play on mobile devices.
 - Enemies spawn around the map, move randomly and fire projectiles at the player.
 - Obstacles block movement and projectiles, requiring you to maneuver carefully.
 - Projectiles and enemy projectiles can collide with each other.
