@@ -233,16 +233,62 @@ function collidesWithObstacles(position, radius) {
         // Get the current obstacle.
         const obstacle = obstacles[i];
         // Define half size of the obstacle for bounds checking.
-        const halfSize = 2.5;
-        // Check for overlap on the x and z axes.
-        if (Math.abs(position.x - obstacle.position.x) < halfSize + radius &&
-            Math.abs(position.z - obstacle.position.z) < halfSize + radius) {
-            // Return true if there is a collision.
-            return true;
+        const halfSize = 2.5; // Define half size of the obstacle for bounds checking.
+        // Calculate the absolute x distance from the obstacle center.
+        const dx = Math.abs(position.x - obstacle.position.x);
+        // Calculate the absolute z distance from the obstacle center.
+        const dz = Math.abs(position.z - obstacle.position.z);
+        // Check for horizontal overlap before checking vertical position.
+        if (dx < halfSize + radius && dz < halfSize + radius) {
+            // Calculate the bottom of the player sphere.
+            const playerBottom = position.y - radius;
+            // Calculate the top of the obstacle cube.
+            const obstacleTop = obstacle.position.y + halfSize;
+            // Allow overlap when the player is above the obstacle.
+            if (playerBottom >= obstacleTop) {
+                // Skip this obstacle because the player is standing on top.
+                continue;
+            }
+            // Calculate the bottom of the obstacle cube.
+            const obstacleBottom = obstacle.position.y - halfSize;
+            // Check if the player is inside the vertical bounds.
+            if (playerBottom < obstacleTop && position.y + radius > obstacleBottom) {
+                // Return true because a collision occurs.
+                return true;
+            }
         }
     }
     // Return false if no collisions were detected.
     return false;
+}
+
+// Function to get the ground height at a specific x and z position.
+function getGroundHeight(x, z) {
+    // Start with the base ground height of zero.
+    let height = 0;
+    // Loop over each obstacle in the array.
+    for (let i = 0; i < obstacles.length; i++) {
+        // Get the current obstacle from the array.
+        const obstacle = obstacles[i];
+        // Define half the obstacle size for bounds checking.
+        const halfSize = 2.5;
+        // Calculate the absolute x distance to the obstacle center.
+        const dx = Math.abs(x - obstacle.position.x);
+        // Calculate the absolute z distance to the obstacle center.
+        const dz = Math.abs(z - obstacle.position.z);
+        // Check if the position is within the obstacle bounds.
+        if (dx < halfSize && dz < halfSize) {
+            // Determine the top height of this obstacle.
+            const top = obstacle.position.y + halfSize;
+            // Keep the highest obstacle top found so far.
+            if (top > height) {
+                // Store the top height for later comparison.
+                height = top;
+            }
+        }
+    }
+    // Return the highest obstacle top or zero if none.
+    return height;
 }
 
 // Function to check if there is a clear path between two points.
@@ -1298,18 +1344,25 @@ function animate(currentTime) {
     // Clamp the player's z position within the ground boundaries.
     yawObject.position.z = Math.max(-250, Math.min(250, yawObject.position.z));
 
+    // Get the surface height directly below the player.
+    const surfaceY = getGroundHeight(yawObject.position.x, yawObject.position.z);
+    // Calculate the y position where the player's camera should rest.
+    const targetY = surfaceY + groundLevel;
     // Apply gravity to the vertical velocity.
     verticalVelocity += gravity;
     // Add the vertical velocity to the player's y position.
     yawObject.position.y += verticalVelocity;
-    // Check if the player has landed on the ground.
-    if (yawObject.position.y <= groundLevel) {
-        // Reset the player's y position to ground level.
-        yawObject.position.y = groundLevel;
-        // Reset the vertical velocity when on the ground.
+    // Check if the player's feet are below the surface height.
+    if (yawObject.position.y - groundLevel <= surfaceY) {
+        // Snap the player position to the surface height.
+        yawObject.position.y = targetY;
+        // Reset the vertical velocity when landing.
         verticalVelocity = 0;
         // Mark the player as grounded.
         isGrounded = true;
+    } else {
+        // Mark the player as airborne when above the surface.
+        isGrounded = false;
     }
     // Increase bobbing when the player is airborne.
     if (!isGrounded) {
