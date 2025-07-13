@@ -1440,6 +1440,11 @@ function animate(currentTime) {
                     const qualifies = highScores.length < MAX_HIGH_SCORES || score > Math.min(...highScores.map(entry => entry.score));
                     // Check if the score qualifies for the top five.
                     if (qualifies) {
+                        // Stop all projectile hums so the prompt is silent.
+                        if (typeof stopAllProjectileHums === 'function') {
+                            // Call the function when it exists.
+                            stopAllProjectileHums();
+                        }
                         // Prompt the player for their name or use a default value.
                         const playerName = prompt('Enter your name:', DEFAULT_PLAYER_NAME) || DEFAULT_PLAYER_NAME;
                         // Add the new score to the high scores array.
