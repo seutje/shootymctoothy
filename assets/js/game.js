@@ -35,6 +35,12 @@ const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
 directionalLight.position.set(1, 1, 1);
 // Add the directional light to the scene.
 scene.add(directionalLight);
+// Create a bright point light that represents the sun.
+const sunLight = new THREE.PointLight(0xffffff, 1, 0);
+// Position the sun light high above the scene.
+sunLight.position.set(50, 100, 50);
+// Add the sun light to the scene.
+scene.add(sunLight);
 
 // Create a plane geometry for the ground.
 const groundGeometry = new THREE.PlaneGeometry(500, 500);
