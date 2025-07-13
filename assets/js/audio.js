@@ -37,18 +37,22 @@ function attachAudioListener(cam) {
     // Add the listener object to the provided camera.
     cam.add(listener);
 }
-// Create a buffer filled with a low hum tone.
+// Create a buffer filled with a rocket engine sound.
 const humBufferLength = audioContext.sampleRate;
 // Create the buffer with one channel lasting one second.
 const humBuffer = audioContext.createBuffer(1, humBufferLength, audioContext.sampleRate);
-// Get the data array from the hum buffer.
+// Get the data array from the engine buffer.
 const humData = humBuffer.getChannelData(0);
-// Fill the buffer with a sine wave at one hundred hertz.
+// Fill the buffer with a layered engine tone.
 for (let i = 0; i < humBufferLength; i++) {
     // Calculate the time for this sample.
     const time = i / audioContext.sampleRate;
-    // Set the sample value using the sine function.
-    humData[i] = Math.sin(2 * Math.PI * 100 * time);
+    // Create the base sawtooth-like waveform using two sine waves.
+    const base = Math.sin(2 * Math.PI * 110 * time) + 0.5 * Math.sin(2 * Math.PI * 220 * time);
+    // Add a small amount of random noise for texture.
+    const noise = (Math.random() * 2 - 1) * 0.2;
+    // Combine the base tone and noise scaled down for a subtle effect.
+    humData[i] = (base / 1.5 + noise) * 0.5;
 }
 // Variable to store the interval ID for the soundtrack loop.
 let soundtrackInterval;
