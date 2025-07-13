@@ -319,6 +319,11 @@ function stopAllProjectileHums() {
 
 // Function to attach a spatial hum to a projectile.
 function addHumToProjectile(projectile) {
+    // Skip creating the hum when autoplay mode is active.
+    if (autoplay) {
+        // Exit the function early to avoid playing sound.
+        return;
+    }
     // Create a positional audio object using the global listener.
     const sound = new THREE.PositionalAudio(listener);
     // Set the hum buffer as the sound source.
