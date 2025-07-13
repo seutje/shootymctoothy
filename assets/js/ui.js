@@ -20,6 +20,41 @@ function drawCrosshair() {
     uiContext.stroke();
 }
 
+// Function to draw weapon icons at the bottom of the screen.
+function drawWeaponIcons() {
+    const iconSize = 50; // Size of each icon.
+    const padding = 10; // Space between icons.
+    const totalWidth = iconSize * 3 + padding * 2; // Width of all icons combined.
+    const startX = (uiCanvas.width - totalWidth) / 2; // Center starting x position.
+    const y = uiCanvas.height - iconSize - 10; // Y position of the icons.
+    // Loop over each weapon to draw its icon.
+    for (let i = 0; i < 3; i++) {
+        const x = startX + i * (iconSize + padding); // Calculate the x position for this icon.
+        uiContext.fillStyle = 'black'; // Fill the icon background with black.
+        uiContext.fillRect(x, y, iconSize, iconSize); // Draw the icon background.
+        uiContext.strokeStyle = currentWeapon === i ? 'yellow' : 'white'; // Choose the border color.
+        uiContext.lineWidth = 2; // Use a two pixel border.
+        uiContext.strokeRect(x, y, iconSize, iconSize); // Draw the border.
+        if (i === 0) {
+            uiContext.fillStyle = 'yellow'; // Use yellow for the pistol.
+            uiContext.fillRect(x + 8, y + 18, iconSize - 16, 8); // Draw the pistol barrel.
+            uiContext.fillRect(x + iconSize - 16, y + 26, 8, 16); // Draw the pistol handle.
+        } else if (i === 1) {
+            uiContext.fillStyle = 'red'; // Use red for the rocket launcher.
+            uiContext.fillRect(x + iconSize / 2 - 4, y + 10, 8, iconSize - 20); // Draw the launcher barrel.
+            uiContext.beginPath(); // Start the rocket tip path.
+            uiContext.moveTo(x + iconSize / 2, y + 5); // Move to the tip point.
+            uiContext.lineTo(x + iconSize / 2 - 8, y + 10); // Draw to the left base.
+            uiContext.lineTo(x + iconSize / 2 + 8, y + 10); // Draw to the right base.
+            uiContext.closePath(); // Finish the triangle path.
+            uiContext.fill(); // Fill the rocket tip.
+        } else {
+            uiContext.fillStyle = 'blue'; // Use blue for the lightning gun.
+            uiContext.fillRect(x + iconSize / 2 - 2, y + 10, 4, iconSize - 20); // Draw the lightning barrel.
+        }
+    }
+}
+
 // Function to draw the user interface.
 function drawUI() {
     // Clear the entire UI canvas.
@@ -38,6 +73,10 @@ function drawUI() {
     if (gameStarted && !gameOver && !gamePaused) {
         // Draw the crosshair when the player is in control.
         drawCrosshair();
+    }
+    if (gameStarted && !gameOver) {
+        // Draw icons for each weapon.
+        drawWeaponIcons();
     }
     // Check if the game is paused during play.
     if (gamePaused && gameStarted && !gameOver) {
