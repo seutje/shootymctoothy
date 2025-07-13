@@ -93,8 +93,8 @@ const gunBasePosition = new THREE.Vector3(0, 0, -0.3);
 gunGroup.position.copy(gunBasePosition);
 // Create a box geometry for the gun barrel.
 const barrelGeometry = new THREE.BoxGeometry(0.1, 0.1, 0.6);
-// Create a yellow material for the gun meshes.
-const gunMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+// Create a yellow material for the gun meshes that reacts to light.
+const gunMaterial = new THREE.MeshLambertMaterial({ color: 0xffff00 });
 // Create a mesh for the barrel using the geometry and material.
 const barrelMesh = new THREE.Mesh(barrelGeometry, gunMaterial);
 // Position the barrel mesh in front of the camera.
@@ -118,8 +118,8 @@ const rocketGroup = new THREE.Group();
 rocketGroup.position.copy(gunBasePosition);
 // Create a cylinder geometry for the launcher barrel.
 const rocketBarrelGeometry = new THREE.CylinderGeometry(0.1, 0.1, 0.6, 16);
-// Create a red material for the launcher meshes.
-const rocketMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+// Create a red material for the launcher meshes that reacts to light.
+const rocketMaterial = new THREE.MeshLambertMaterial({ color: 0xff0000 });
 // Create a mesh for the launcher barrel.
 const rocketBarrelMesh = new THREE.Mesh(rocketBarrelGeometry, rocketMaterial);
 // Rotate the barrel so it points forward along the z axis.
@@ -139,8 +139,8 @@ const lightningGroup = new THREE.Group();
 lightningGroup.position.copy(gunBasePosition);
 // Create a cylinder geometry for the lightning barrel.
 const lightningBarrelGeometry = new THREE.CylinderGeometry(0.05, 0.05, 1, 16);
-// Create a blue material for the lightning gun meshes.
-const lightningMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff });
+// Create a blue material for the lightning gun meshes that reacts to light.
+const lightningMaterial = new THREE.MeshLambertMaterial({ color: 0x0000ff });
 // Create a mesh for the lightning barrel.
 const lightningBarrelMesh = new THREE.Mesh(lightningBarrelGeometry, lightningMaterial);
 // Rotate the barrel so it points forward.
@@ -187,8 +187,8 @@ const obstacleSpawnBuffer = 1;
 function createObstacle(x, z) {
     // Create a box geometry for the obstacle.
     const obstacleGeometry = new THREE.BoxGeometry(5, 5, 5);
-    // Create a material for the obstacle using the loaded texture.
-    const obstacleMaterial = new THREE.MeshBasicMaterial({ map: obstacleTexture });
+    // Create a material for the obstacle using the loaded texture that reacts to light.
+    const obstacleMaterial = new THREE.MeshLambertMaterial({ map: obstacleTexture });
     // Create a mesh from the obstacle geometry and material.
     const obstacle = new THREE.Mesh(obstacleGeometry, obstacleMaterial);
     // Set the obstacle position.
@@ -1205,8 +1205,8 @@ function findEnemySpawnPosition() {
 function createEnemy() {
     // Create a box geometry for the enemy.
     const enemyGeometry = new THREE.BoxGeometry(2, 2, 2);
-    // Create a material for the enemy using the loaded texture.
-    const enemyMaterial = new THREE.MeshBasicMaterial({ map: enemyTexture });
+    // Create a material for the enemy using the loaded texture that reacts to light.
+    const enemyMaterial = new THREE.MeshLambertMaterial({ map: enemyTexture });
     // Create a mesh from the enemy geometry and material.
     const enemy = new THREE.Mesh(enemyGeometry, enemyMaterial);
     // Find a valid spawn position for the enemy.
