@@ -142,10 +142,10 @@ function updateAutoplayAI(currentTime) {
         currentAIDirection = null;
     }
     // Reset the movement keys before applying the AI direction.
-    keys['w'] = false;
-    keys['a'] = false;
-    keys['s'] = false;
-    keys['d'] = false;
+    if (typeof resetMovementKeys === 'function') {
+        // Call the helper function when available.
+        resetMovementKeys();
+    }
     // Apply the current AI movement direction if any.
     if (currentAIDirection) {
         // Set the chosen direction key to true.
@@ -243,10 +243,10 @@ function startAutoplay() {
     // Keep autoplay mode enabled for the demo.
     autoplay = true;
     // Reset enemy shot timers.
-    enemies.forEach(enemy => {
-        // Set the last shot time for the enemy to the current time.
-        enemy.lastShotTime = Date.now();
-    });
+    if (typeof resetEnemyShotTimers === 'function') {
+        // Call the helper function when available.
+        resetEnemyShotTimers();
+    }
 }
 
 // Start the autoplay demo when the script loads.
