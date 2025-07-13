@@ -717,8 +717,6 @@ function createProjectile() {
         scene.add(rocket);
         // Add the rocket to the projectiles array.
         projectiles.push(rocket);
-        // Attach a spatial hum to the rocket.
-        addHumToProjectile(rocket);
     } else if (currentWeapon === 2) {
         // Create a vector storing the muzzle position for the ray start.
         const start = new THREE.Vector3();
@@ -799,8 +797,6 @@ function createProjectile() {
         scene.add(projectile);
         // Add the bullet to the projectiles array.
         projectiles.push(projectile);
-        // Attach a spatial hum to the bullet.
-        addHumToProjectile(projectile);
     }
     // Play the shooting sound effect only after player interaction.
     if (!autoplay) {
