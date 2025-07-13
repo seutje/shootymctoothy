@@ -1432,15 +1432,16 @@ function animate(currentTime) {
             }
             // Check if player is dead.
             if (health <= 0) {
+                gameOver = true;
                 // Only record high scores when not in autoplay mode.
                 if (!autoplay) {
                     // Determine if the current score qualifies for the high score list.
                     const qualifies = highScores.length < MAX_HIGH_SCORES || score > Math.min(...highScores.map(entry => entry.score));
                     // Check if the score qualifies for the top five.
                     if (qualifies) {
-                        // Stop all projectile hums so the prompt is silent.
+                        // Stop all sounds before showing the prompt.
+                        stopSoundtrack();
                         if (typeof stopAllProjectileHums === 'function') {
-                            // Call the function when it exists.
                             stopAllProjectileHums();
                         }
                         // Prompt the player for their name or use a default value.
@@ -1592,7 +1593,7 @@ function animate(currentTime) {
         }
 
         // Make enemies shoot at the player periodically.
-        if (Date.now() - enemy1.lastShotTime > enemy1.shotInterval) {
+        if (!gameOver && Date.now() - enemy1.lastShotTime > enemy1.shotInterval) {
             // Create an enemy projectile.
             createEnemyProjectile(enemy1);
             // Update the last shot time.
