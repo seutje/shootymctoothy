@@ -15,6 +15,8 @@ scene.environment = skyTexture;
 
 // Create a new perspective camera.
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+// Attach the audio listener to the camera.
+attachAudioListener(camera);
 // Create a new WebGL renderer.
 const renderer = new THREE.WebGLRenderer();
 // Set the size of the renderer to the window size.
@@ -1041,8 +1043,6 @@ function updateEnemySpawn() {
 function animate(currentTime) {
     // Request the next animation frame.
     animationFrameId = requestAnimationFrame(animate);
-    // Update the audio listener position and orientation.
-    updateAudioListener();
 
     // Calculate FPS.
     frameCount++;
@@ -1233,15 +1233,6 @@ function animate(currentTime) {
         const projectile = projectiles[i];
         // Update the projectile's position based on its velocity.
         projectile.position.add(projectile.velocity);
-        // Update the audio position if the projectile has a hum.
-        if (projectile.hum) {
-            // Set the panner x position to the projectile x position.
-            projectile.hum.panner.positionX.value = projectile.position.x;
-            // Set the panner y position to the projectile y position.
-            projectile.hum.panner.positionY.value = projectile.position.y;
-            // Set the panner z position to the projectile z position.
-            projectile.hum.panner.positionZ.value = projectile.position.z;
-        }
         // Remove the projectile if it travels too far from its spawn position.
         if (projectile.position.distanceTo(projectile.spawnPosition) > 100) {
             // Stop the hum sound for this projectile.
@@ -1386,15 +1377,6 @@ function animate(currentTime) {
         const projectile = enemyProjectiles[i];
         // Update the projectile's position based on its velocity.
         projectile.position.add(projectile.velocity);
-        // Update the audio position if the projectile has a hum.
-        if (projectile.hum) {
-            // Set the panner x position to the projectile x position.
-            projectile.hum.panner.positionX.value = projectile.position.x;
-            // Set the panner y position to the projectile y position.
-            projectile.hum.panner.positionY.value = projectile.position.y;
-            // Set the panner z position to the projectile z position.
-            projectile.hum.panner.positionZ.value = projectile.position.z;
-        }
         // Remove the projectile if it travels too far from its spawn position.
         if (projectile.position.distanceTo(projectile.spawnPosition) > 100) {
             // Stop the hum sound for this projectile.
