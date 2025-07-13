@@ -279,6 +279,27 @@ const explosions = [];
 // Create an array to store lightning beam meshes.
 const lightningBeams = [];
 
+// Function to reset enemy shot timers for all enemies.
+function resetEnemyShotTimers() {
+    // Loop over each enemy in the array.
+    enemies.forEach(enemy => {
+        // Set the last shot time for this enemy to the current time.
+        enemy.lastShotTime = Date.now();
+    });
+}
+
+// Function to clear all movement key states.
+function resetMovementKeys() {
+    // Clear the forward key state.
+    keys['w'] = false;
+    // Clear the left key state.
+    keys['a'] = false;
+    // Clear the backward key state.
+    keys['s'] = false;
+    // Clear the right key state.
+    keys['d'] = false;
+}
+
 // Create a texture object that will hold the enemy texture.
 const enemyTexture = new THREE.Texture();
 // Create an image element to load the enemy texture.
@@ -1808,7 +1829,10 @@ function startGame() {
     // Request pointer lock.
     document.body.requestPointerLock();
     // Reset movement keys to avoid AI input persisting.
-    if (typeof keys !== 'undefined') {
+    if (typeof resetMovementKeys === 'function') {
+        // Call the helper function when available.
+        resetMovementKeys();
+    } else if (typeof keys !== 'undefined') {
         // Clear the forward key state.
         keys['w'] = false;
         // Clear the left key state.
@@ -1819,10 +1843,15 @@ function startGame() {
         keys['d'] = false;
     }
 
-
     // Reset enemy shot timers.
-    enemies.forEach(enemy => {
-        // Set the last shot time for the enemy to the current time.
-        enemy.lastShotTime = Date.now();
-    });
+    if (typeof resetEnemyShotTimers === 'function') {
+        // Call the helper function when available.
+        resetEnemyShotTimers();
+    } else {
+        // Loop over each enemy in the array.
+        enemies.forEach(enemy => {
+            // Set the last shot time for this enemy to the current time.
+            enemy.lastShotTime = Date.now();
+        });
+    }
 }
