@@ -277,6 +277,79 @@ function stopSoundtrack() {
     clearInterval(soundtrackInterval);
 }
 
+// Function to attach a spatial hum to a projectile.
+function addHumToProjectile(projectile) {
+    // Create an oscillator node for the hum.
+    const oscillator = audioContext.createOscillator();
+    // Use a sine wave for a smooth tone.
+    oscillator.type = 'sine';
+    // Set the frequency to one hundred hertz for a low hum.
+    oscillator.frequency.value = 100;
+    // Create a gain node to control the hum volume.
+    const gainNode = audioContext.createGain();
+    // Keep the hum volume subtle at five percent.
+    gainNode.gain.value = 0.05;
+    // Create a panner node for spatial audio.
+    const panner = audioContext.createPanner();
+    // Use a linear distance model so volume fades with distance.
+    panner.distanceModel = 'linear';
+    // Set the reference distance to one unit.
+    panner.refDistance = 1;
+    // Connect the oscillator to the gain node.
+    oscillator.connect(gainNode);
+    // Connect the gain node to the panner node.
+    gainNode.connect(panner);
+    // Connect the panner node to the master gain.
+    panner.connect(masterGain);
+    // Start the oscillator immediately.
+    oscillator.start();
+    // Store the audio nodes on the projectile for updates.
+    projectile.hum = { oscillator: oscillator, gain: gainNode, panner: panner };
+}
+
+// Function to stop and remove a projectile's hum.
+function removeHumFromProjectile(projectile) {
+    // Ensure the projectile has a hum before attempting to remove it.
+    if (projectile.hum) {
+        // Stop the oscillator right away.
+        projectile.hum.oscillator.stop();
+        // Disconnect the oscillator from the audio graph.
+        projectile.hum.oscillator.disconnect();
+        // Disconnect the gain node from the audio graph.
+        projectile.hum.gain.disconnect();
+        // Disconnect the panner node from the audio graph.
+        projectile.hum.panner.disconnect();
+        // Clear the hum reference on the projectile.
+        projectile.hum = null;
+    }
+}
+
+// Function to update the audio listener position and orientation.
+function updateAudioListener() {
+    // Set the listener position on the x axis.
+    audioContext.listener.positionX.value = yawObject.position.x;
+    // Set the listener position on the y axis.
+    audioContext.listener.positionY.value = yawObject.position.y;
+    // Set the listener position on the z axis.
+    audioContext.listener.positionZ.value = yawObject.position.z;
+    // Create a vector for the forward direction.
+    const forward = new THREE.Vector3();
+    // Get the camera's forward direction.
+    camera.getWorldDirection(forward);
+    // Set the listener forward x component.
+    audioContext.listener.forwardX.value = forward.x;
+    // Set the listener forward y component.
+    audioContext.listener.forwardY.value = forward.y;
+    // Set the listener forward z component.
+    audioContext.listener.forwardZ.value = forward.z;
+    // Set the listener up x component.
+    audioContext.listener.upX.value = 0;
+    // Set the listener up y component.
+    audioContext.listener.upY.value = 1;
+    // Set the listener up z component.
+    audioContext.listener.upZ.value = 0;
+}
+
 // The function to set the master volume.
 function setVolume(level) {
     // Clamp the level between zero and one.

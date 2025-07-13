@@ -710,6 +710,8 @@ function createProjectile() {
         scene.add(rocket);
         // Add the rocket to the projectiles array.
         projectiles.push(rocket);
+        // Attach a spatial hum to the rocket.
+        addHumToProjectile(rocket);
     } else if (currentWeapon === 2) {
         // Create a vector storing the muzzle position for the ray start.
         const start = new THREE.Vector3();
@@ -790,6 +792,8 @@ function createProjectile() {
         scene.add(projectile);
         // Add the bullet to the projectiles array.
         projectiles.push(projectile);
+        // Attach a spatial hum to the bullet.
+        addHumToProjectile(projectile);
     }
     // Play the shooting sound effect only after player interaction.
     if (!autoplay) {
@@ -822,6 +826,8 @@ function createEnemyProjectile(enemy) {
     scene.add(projectile);
     // Add the projectile to the enemy projectiles array.
     enemyProjectiles.push(projectile);
+    // Attach a spatial hum to the enemy projectile.
+    addHumToProjectile(projectile);
 }
 
 // Function to create a health pack at a given position.
@@ -1035,6 +1041,8 @@ function updateEnemySpawn() {
 function animate(currentTime) {
     // Request the next animation frame.
     animationFrameId = requestAnimationFrame(animate);
+    // Update the audio listener position and orientation.
+    updateAudioListener();
 
     // Calculate FPS.
     frameCount++;
@@ -1225,8 +1233,19 @@ function animate(currentTime) {
         const projectile = projectiles[i];
         // Update the projectile's position based on its velocity.
         projectile.position.add(projectile.velocity);
+        // Update the audio position if the projectile has a hum.
+        if (projectile.hum) {
+            // Set the panner x position to the projectile x position.
+            projectile.hum.panner.positionX.value = projectile.position.x;
+            // Set the panner y position to the projectile y position.
+            projectile.hum.panner.positionY.value = projectile.position.y;
+            // Set the panner z position to the projectile z position.
+            projectile.hum.panner.positionZ.value = projectile.position.z;
+        }
         // Remove the projectile if it travels too far from its spawn position.
         if (projectile.position.distanceTo(projectile.spawnPosition) > 100) {
+            // Stop the hum sound for this projectile.
+            removeHumFromProjectile(projectile);
             // Remove the projectile mesh from the scene.
             scene.remove(projectile);
             // Remove the projectile from the projectiles array.
@@ -1265,6 +1284,8 @@ function animate(currentTime) {
             }
             // Detonate the rocket if needed.
             if (explode) {
+                // Stop the hum sound for this projectile.
+                removeHumFromProjectile(projectile);
                 // Remove the rocket mesh from the scene.
                 scene.remove(projectile);
                 // Remove the rocket from the projectiles array.
@@ -1277,6 +1298,8 @@ function animate(currentTime) {
         } else {
             // Remove the projectile if it hits an obstacle.
             if (collidesWithObstacles(projectile.position, 0.5)) {
+                // Stop the hum sound for this projectile.
+                removeHumFromProjectile(projectile);
                 // Remove the projectile mesh from the scene.
                 scene.remove(projectile);
                 // Remove the projectile from the projectiles array.
@@ -1286,6 +1309,8 @@ function animate(currentTime) {
             }
             // Remove the projectile if it leaves the ground plane.
             if (Math.abs(projectile.position.x) > 250 || Math.abs(projectile.position.z) > 250) {
+                // Stop the hum sound for this projectile.
+                removeHumFromProjectile(projectile);
                 // Remove the projectile mesh from the scene.
                 scene.remove(projectile);
                 // Remove the projectile from the projectiles array.
@@ -1301,10 +1326,14 @@ function animate(currentTime) {
             const enemyProjectile = enemyProjectiles[k];
             // Check if the projectile is close to the enemy projectile.
             if (projectile.position.distanceTo(enemyProjectile.position) < 0.5) {
+                // Stop the hum sound for the player projectile.
+                removeHumFromProjectile(projectile);
                 // Remove the player projectile from the scene.
                 scene.remove(projectile);
                 // Remove the player projectile from the array.
                 projectiles.splice(i, 1);
+                // Stop the hum sound for the enemy projectile.
+                removeHumFromProjectile(enemyProjectile);
                 // Remove the enemy projectile from the scene.
                 scene.remove(enemyProjectile);
                 // Remove the enemy projectile from its array.
@@ -1320,6 +1349,8 @@ function animate(currentTime) {
             const enemy = enemies[j];
             // Check if the projectile is close to the enemy.
             if (projectile.position.distanceTo(enemy.position) < 1.5) {
+                // Stop the hum sound for this projectile.
+                removeHumFromProjectile(projectile);
                 // Remove the projectile from the scene.
                 scene.remove(projectile);
                 // Remove the projectile from the array.
@@ -1355,8 +1386,19 @@ function animate(currentTime) {
         const projectile = enemyProjectiles[i];
         // Update the projectile's position based on its velocity.
         projectile.position.add(projectile.velocity);
+        // Update the audio position if the projectile has a hum.
+        if (projectile.hum) {
+            // Set the panner x position to the projectile x position.
+            projectile.hum.panner.positionX.value = projectile.position.x;
+            // Set the panner y position to the projectile y position.
+            projectile.hum.panner.positionY.value = projectile.position.y;
+            // Set the panner z position to the projectile z position.
+            projectile.hum.panner.positionZ.value = projectile.position.z;
+        }
         // Remove the projectile if it travels too far from its spawn position.
         if (projectile.position.distanceTo(projectile.spawnPosition) > 100) {
+            // Stop the hum sound for this projectile.
+            removeHumFromProjectile(projectile);
             // Remove the projectile mesh from the scene.
             scene.remove(projectile);
             // Remove the projectile from the enemy projectiles array.
@@ -1366,6 +1408,8 @@ function animate(currentTime) {
         }
         // Remove the projectile if it hits an obstacle.
         if (collidesWithObstacles(projectile.position, 0.5)) {
+            // Stop the hum sound for this projectile.
+            removeHumFromProjectile(projectile);
             // Remove the projectile mesh from the scene.
             scene.remove(projectile);
             // Remove the projectile from the enemy projectiles array.
@@ -1376,6 +1420,8 @@ function animate(currentTime) {
 
         // Remove the enemy projectile if it leaves the ground plane.
         if (Math.abs(projectile.position.x) > 250 || Math.abs(projectile.position.z) > 250) {
+            // Stop the hum sound for this projectile.
+            removeHumFromProjectile(projectile);
             // Remove the projectile mesh from the scene.
             scene.remove(projectile);
             // Remove the projectile from the enemy projectiles array.
@@ -1386,6 +1432,8 @@ function animate(currentTime) {
 
         // Check for collision with the player.
         if (projectile.position.distanceTo(yawObject.position) < 1) {
+            // Stop the hum sound for this projectile.
+            removeHumFromProjectile(projectile);
             // Remove the projectile from the scene.
             scene.remove(projectile);
             // Remove the projectile from the array.
