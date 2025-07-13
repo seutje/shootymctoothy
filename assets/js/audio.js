@@ -299,6 +299,20 @@ function stopSoundtrack() {
     clearInterval(soundtrackInterval);
 }
 
+// Function to stop all projectile hums at once.
+function stopAllProjectileHums() {
+    // Loop over each friendly projectile.
+    projectiles.forEach(p => {
+        // Stop and remove the hum from this projectile.
+        removeHumFromProjectile(p);
+    });
+    // Loop over each enemy projectile.
+    enemyProjectiles.forEach(p => {
+        // Stop and remove the hum from this projectile.
+        removeHumFromProjectile(p);
+    });
+}
+
 // Function to attach a spatial hum to a projectile.
 function addHumToProjectile(projectile) {
     // Create a positional audio object using the global listener.

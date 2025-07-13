@@ -506,6 +506,11 @@ function togglePause() {
     if (gamePaused) {
         // Stop the soundtrack loop.
         stopSoundtrack();
+        // Stop all projectile hums so they do not continue while paused.
+        if (typeof stopAllProjectileHums === 'function') {
+            // Call the function when it exists.
+            stopAllProjectileHums();
+        }
         // Release pointer lock to free the mouse.
         document.exitPointerLock();
     }
@@ -1462,6 +1467,11 @@ function animate(currentTime) {
                     gameOver = true;
                     // Stop the soundtrack when the game ends.
                     stopSoundtrack();
+                    // Stop all projectile hums because gameplay has ended.
+                    if (typeof stopAllProjectileHums === 'function') {
+                        // Call the function when it exists.
+                        stopAllProjectileHums();
+                    }
                     // Release the mouse pointer.
                     document.exitPointerLock();
                 }
@@ -1613,6 +1623,11 @@ function resetGameState() {
     verticalVelocity = 0;
     // Set the player as grounded.
     isGrounded = true;
+    // Stop hum sounds for all existing projectiles.
+    if (typeof stopAllProjectileHums === 'function') {
+        // Call the function when it exists.
+        stopAllProjectileHums();
+    }
     // Reset the player position on the x axis.
     yawObject.position.x = 0;
     // Reset the player position on the y axis.
