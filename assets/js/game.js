@@ -927,6 +927,18 @@ function explodeRocket(position) {
     if (yawObject.position.distanceTo(position) < 6) {
         // Reduce the player's health by twenty without going negative.
         health = Math.max(health - 20, 0);
+        // Create a vector storing the direction away from the explosion.
+        const pushDirection = new THREE.Vector3();
+        // Calculate the direction from the explosion to the player.
+        pushDirection.subVectors(yawObject.position, position);
+        // Normalize the push direction.
+        pushDirection.normalize();
+        // Add the push force to the horizontal velocity.
+        horizontalVelocity.add(pushDirection.multiplyScalar(0.3));
+        // Increase the player's upward velocity if needed.
+        verticalVelocity = Math.max(verticalVelocity, 0.2);
+        // Mark the player as airborne because of the blast.
+        isGrounded = false;
     }
 }
 
