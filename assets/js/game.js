@@ -449,7 +449,7 @@ const lightningShotInterval = 300;
 // Define the maximum range of the lightning gun.
 const lightningRange = 100;
 // Duration in milliseconds for the lightning beam to fade out.
-const lightningFadeDuration = 100;
+const lightningFadeDuration = 300;
 // Define how far the gun moves up and down when bobbing.
 const gunBobAmplitude = 0.05;
 // Define how quickly the bobbing motion slows down.
