@@ -530,6 +530,29 @@ let gunTiltY = 0;
 // Track the index of the current weapon.
 let currentWeapon = 0;
 
+// Function to set the active weapon.
+function setWeapon(index) {
+    // Assign the index to the current weapon variable.
+    currentWeapon = index;
+    // Check if the pistol is selected.
+    if (currentWeapon === 0) {
+        // Use the pistol fire rate for the shot interval.
+        playerShotInterval = gunShotInterval;
+    } else if (currentWeapon === 1) {
+        // Use the rocket fire rate when the rocket launcher is selected.
+        playerShotInterval = rocketShotInterval;
+    } else {
+        // Use the lightning fire rate when the lightning gun is selected.
+        playerShotInterval = lightningShotInterval;
+    }
+    // Set the visibility of the pistol model.
+    gunGroup.visible = currentWeapon === 0;
+    // Set the visibility of the rocket launcher model.
+    rocketGroup.visible = currentWeapon === 1;
+    // Set the visibility of the lightning gun model.
+    lightningGroup.visible = currentWeapon === 2;
+}
+
 // Add an event listener for mouse movement to control the camera.
 document.addEventListener('mousemove', onMouseMove, false);
 // Add an event listener for mouse clicks to fire projectiles.
@@ -625,6 +648,19 @@ function onKeyDown(event) {
             // Call the pause toggle function.
             togglePause();
         }
+    }
+    // Check if the number keys were pressed.
+    if (event.key === '1') {
+        // Switch to the pistol when pressing one.
+        setWeapon(0);
+    }
+    if (event.key === '2') {
+        // Switch to the rocket launcher when pressing two.
+        setWeapon(1);
+    }
+    if (event.key === '3') {
+        // Switch to the lightning gun when pressing three.
+        setWeapon(2);
     }
 }
 
@@ -732,31 +768,10 @@ function onWindowResize() {
 function onMouseWheel(event) {
     // Swap weapons when the wheel moves up or down.
     if (event.deltaY !== 0) {
-        // Check if the wheel was scrolled downward.
-        if (event.deltaY > 0) {
-            // Move to the next weapon when scrolling down.
-            currentWeapon = (currentWeapon + 1) % 3;
-        } else {
-            // Move to the previous weapon when scrolling up.
-            currentWeapon = (currentWeapon + 2) % 3;
-        }
-        // Set the interval based on the selected weapon.
-        if (currentWeapon === 0) {
-            // Use the basic gun interval when index is zero.
-            playerShotInterval = gunShotInterval;
-        } else if (currentWeapon === 1) {
-            // Use the rocket interval when index is one.
-            playerShotInterval = rocketShotInterval;
-        } else {
-            // Use the lightning interval when index is two.
-            playerShotInterval = lightningShotInterval;
-        }
-        // Show the gun model when using the basic weapon.
-        gunGroup.visible = currentWeapon === 0;
-        // Show the rocket launcher model when selected.
-        rocketGroup.visible = currentWeapon === 1;
-        // Show the lightning gun model when selected.
-        lightningGroup.visible = currentWeapon === 2;
+        // Determine the next weapon index from the wheel direction.
+        const nextIndex = event.deltaY > 0 ? (currentWeapon + 1) % 3 : (currentWeapon + 2) % 3;
+        // Apply the weapon change using the helper function.
+        setWeapon(nextIndex);
     }
 }
 
@@ -1851,14 +1866,7 @@ function resetGameState() {
     // Clear the lightning beams array.
     lightningBeams.length = 0;
     // Reset to the basic gun weapon.
-    currentWeapon = 0;
-    // Set the shot interval for the gun.
-    playerShotInterval = gunShotInterval;
-    // Show the gun model and hide the rocket launcher.
-    gunGroup.visible = true;
-    rocketGroup.visible = false;
-    // Hide the lightning gun model as well.
-    lightningGroup.visible = false;
+    setWeapon(0);
     // Reset the game start time for spawn scaling.
     gameStartTime = Date.now();
     // Reset the spawn check timer.

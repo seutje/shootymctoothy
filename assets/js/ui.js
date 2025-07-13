@@ -52,6 +52,11 @@ function drawWeaponIcons() {
             uiContext.fillStyle = 'blue'; // Use blue for the lightning gun.
             uiContext.fillRect(x + iconSize / 2 - 2, y + 10, 4, iconSize - 20); // Draw the lightning barrel.
         }
+        uiContext.fillStyle = 'white'; // Set the text color for the number.
+        uiContext.font = '16px sans-serif'; // Set the font size for the number.
+        uiContext.textAlign = 'center'; // Center the text horizontally.
+        uiContext.fillText(String(i + 1), x + iconSize / 2, y - 5); // Draw the weapon number above the icon.
+        uiContext.textAlign = 'left'; // Reset text alignment after drawing.
     }
 }
 
