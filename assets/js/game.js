@@ -732,8 +732,14 @@ function onWindowResize() {
 function onMouseWheel(event) {
     // Swap weapons when the wheel moves up or down.
     if (event.deltaY !== 0) {
-        // Advance the weapon index cycling through three weapons.
-        currentWeapon = (currentWeapon + 1) % 3;
+        // Check if the wheel was scrolled downward.
+        if (event.deltaY > 0) {
+            // Move to the next weapon when scrolling down.
+            currentWeapon = (currentWeapon + 1) % 3;
+        } else {
+            // Move to the previous weapon when scrolling up.
+            currentWeapon = (currentWeapon + 2) % 3;
+        }
         // Set the interval based on the selected weapon.
         if (currentWeapon === 0) {
             // Use the basic gun interval when index is zero.
