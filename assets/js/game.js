@@ -1447,6 +1447,11 @@ function animate(currentTime) {
                         }
                         // Prompt the player for their name or use a default value.
                         const playerName = prompt('Enter your name:', DEFAULT_PLAYER_NAME) || DEFAULT_PLAYER_NAME;
+                        // Stop any hum that may have restarted after the prompt.
+                        if (typeof stopAllProjectileHums === 'function') {
+                            // Call the function to ensure silence.
+                            stopAllProjectileHums();
+                        }
                         // Add the new score to the high scores array.
                         highScores.push({ name: playerName, score: score });
                         // Sort high scores in descending order.
