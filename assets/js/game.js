@@ -1431,7 +1431,7 @@ function animate(currentTime) {
                 playDamageSound();
             }
             // Check if player is dead.
-            if (health <= 0) {
+            if (health <= 0 && !gameOver) {
                 gameOver = true;
                 // Only record high scores when not in autoplay mode.
                 if (!autoplay) {
@@ -1472,8 +1472,6 @@ function animate(currentTime) {
                 } else {
                     // Stop the animation loop when the player dies.
                     gamePaused = true;
-                    // Indicate that the game has ended.
-                    gameOver = true;
                     // Stop the soundtrack when the game ends.
                     stopSoundtrack();
                     // Stop all projectile hums because gameplay has ended.
