@@ -26,14 +26,13 @@ renderer.shadowMap.enabled = true;
 // Append the renderer to the document body.
 document.body.appendChild(renderer.domElement);
 
-// Create a white directional light with an intensity of 0.5.
-const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
-// Set the position of the directional light.
-directionalLight.position.set(1, 1, 1);
-// Add the directional light to the scene.
-scene.add(directionalLight);
+// Create a white ambient light with an intensity of 0.6.
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+// Add the ambient light to the scene.
+scene.add(ambientLight);
+
 // Create a dimmer point light that represents the sun.
-const sunLight = new THREE.PointLight(0xffffff, 0.5, 0);
+const sunLight = new THREE.PointLight(0xffffff, 0.3, 0);
 // Position the sun light high above the scene.
 sunLight.position.set(50, 100, 50);
 // Allow the sun light to cast shadows.
