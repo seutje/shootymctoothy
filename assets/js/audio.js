@@ -370,7 +370,7 @@ function playExplosionSound(position) {
     // Assign the generated buffer to the audio object.
     sound.setBuffer(buffer);
     // Set the explosion volume to a moderate level.
-    sound.setVolume(0.5);
+    sound.setVolume(0.3);
     // Set the reference distance for the positional effect.
     sound.setRefDistance(2);
     // Create a temporary object to hold the sound at the position.
