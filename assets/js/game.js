@@ -31,8 +31,8 @@ const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
 // Add the ambient light to the scene.
 scene.add(ambientLight);
 
-// Create a dimmer point light that represents the sun.
-const sunLight = new THREE.PointLight(0xffffff, 1, 0);
+// Create a dimmer point light that represents the sun and give it a long range.
+const sunLight = new THREE.PointLight(0xffffff, 1, 1000);
 // Position the sun light.
 sunLight.position.set(110, 125, -500);
 // Allow the sun light to cast shadows.
