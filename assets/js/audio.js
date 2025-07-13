@@ -28,6 +28,32 @@ for (let i = 0; i < reverbData.length; i++) {
 }
 // Assign the generated buffer to the convolver node.
 reverbNode.buffer = reverbBuffer;
+// Set the Three.js audio context to the same context.
+THREE.AudioContext.setContext(audioContext);
+// Create a new audio listener for positional audio.
+const listener = new THREE.AudioListener();
+// Function to attach the listener to the camera.
+function attachAudioListener(cam) {
+    // Add the listener object to the provided camera.
+    cam.add(listener);
+}
+// Create a buffer filled with a rocket engine sound.
+const humBufferLength = audioContext.sampleRate;
+// Create the buffer with one channel lasting one second.
+const humBuffer = audioContext.createBuffer(1, humBufferLength, audioContext.sampleRate);
+// Get the data array from the engine buffer.
+const humData = humBuffer.getChannelData(0);
+// Fill the buffer with a layered engine tone.
+for (let i = 0; i < humBufferLength; i++) {
+    // Calculate the time for this sample.
+    const time = i / audioContext.sampleRate;
+    // Create the base sawtooth-like waveform using two sine waves.
+    const base = Math.sin(2 * Math.PI * 110 * time) + 0.5 * Math.sin(2 * Math.PI * 220 * time);
+    // Add a small amount of random noise for texture.
+    const noise = (Math.random() * 2 - 1) * 0.2;
+    // Combine the base tone and noise scaled down for a subtle effect.
+    humData[i] = (base / 1.5 + noise) * 0.5;
+}
 // Variable to store the interval ID for the soundtrack loop.
 let soundtrackInterval;
 
@@ -276,6 +302,56 @@ function stopSoundtrack() {
     // Clear the interval to stop the riff.
     clearInterval(soundtrackInterval);
 }
+
+// Function to stop all projectile hums at once.
+function stopAllProjectileHums() {
+    // Loop over each friendly projectile.
+    projectiles.forEach(p => {
+        // Stop and remove the hum from this projectile.
+        removeHumFromProjectile(p);
+    });
+    // Loop over each enemy projectile.
+    enemyProjectiles.forEach(p => {
+        // Stop and remove the hum from this projectile.
+        removeHumFromProjectile(p);
+    });
+}
+
+// Function to attach a spatial hum to a projectile.
+function addHumToProjectile(projectile) {
+    // Create a positional audio object using the global listener.
+    const sound = new THREE.PositionalAudio(listener);
+    // Set the hum buffer as the sound source.
+    sound.setBuffer(humBuffer);
+    // Enable looping so the hum plays continuously.
+    sound.setLoop(true);
+    // Keep the hum volume subtle at five percent.
+    sound.setVolume(0.05);
+    // Set the reference distance so the volume fades with range.
+    sound.setRefDistance(1);
+    // Start playing the hum sound.
+    sound.play();
+    // Attach the sound object to the projectile mesh.
+    projectile.add(sound);
+    // Store the sound on the projectile for removal later.
+    projectile.hum = sound;
+}
+
+// Function to stop and remove a projectile's hum.
+function removeHumFromProjectile(projectile) {
+    // Ensure the projectile has a hum before attempting to remove it.
+    if (projectile.hum) {
+        // Stop the hum sound immediately.
+        projectile.hum.stop();
+        // Disconnect the hum from the audio graph.
+        projectile.hum.disconnect();
+        // Remove the sound object from the projectile.
+        projectile.remove(projectile.hum);
+        // Clear the hum reference on the projectile.
+        projectile.hum = null;
+    }
+}
+
 
 // The function to set the master volume.
 function setVolume(level) {

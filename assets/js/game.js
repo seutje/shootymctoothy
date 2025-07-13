@@ -15,6 +15,8 @@ scene.environment = skyTexture;
 
 // Create a new perspective camera.
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+// Attach the audio listener to the camera.
+attachAudioListener(camera);
 // Create a new WebGL renderer.
 const renderer = new THREE.WebGLRenderer();
 // Set the size of the renderer to the window size.
@@ -504,6 +506,11 @@ function togglePause() {
     if (gamePaused) {
         // Stop the soundtrack loop.
         stopSoundtrack();
+        // Stop all projectile hums so they do not continue while paused.
+        if (typeof stopAllProjectileHums === 'function') {
+            // Call the function when it exists.
+            stopAllProjectileHums();
+        }
         // Release pointer lock to free the mouse.
         document.exitPointerLock();
     }
@@ -822,6 +829,8 @@ function createEnemyProjectile(enemy) {
     scene.add(projectile);
     // Add the projectile to the enemy projectiles array.
     enemyProjectiles.push(projectile);
+    // Attach a spatial hum to the enemy projectile.
+    addHumToProjectile(projectile);
 }
 
 // Function to create a health pack at a given position.
@@ -1227,6 +1236,8 @@ function animate(currentTime) {
         projectile.position.add(projectile.velocity);
         // Remove the projectile if it travels too far from its spawn position.
         if (projectile.position.distanceTo(projectile.spawnPosition) > 100) {
+            // Stop the hum sound for this projectile.
+            removeHumFromProjectile(projectile);
             // Remove the projectile mesh from the scene.
             scene.remove(projectile);
             // Remove the projectile from the projectiles array.
@@ -1265,6 +1276,8 @@ function animate(currentTime) {
             }
             // Detonate the rocket if needed.
             if (explode) {
+                // Stop the hum sound for this projectile.
+                removeHumFromProjectile(projectile);
                 // Remove the rocket mesh from the scene.
                 scene.remove(projectile);
                 // Remove the rocket from the projectiles array.
@@ -1277,6 +1290,8 @@ function animate(currentTime) {
         } else {
             // Remove the projectile if it hits an obstacle.
             if (collidesWithObstacles(projectile.position, 0.5)) {
+                // Stop the hum sound for this projectile.
+                removeHumFromProjectile(projectile);
                 // Remove the projectile mesh from the scene.
                 scene.remove(projectile);
                 // Remove the projectile from the projectiles array.
@@ -1286,6 +1301,8 @@ function animate(currentTime) {
             }
             // Remove the projectile if it leaves the ground plane.
             if (Math.abs(projectile.position.x) > 250 || Math.abs(projectile.position.z) > 250) {
+                // Stop the hum sound for this projectile.
+                removeHumFromProjectile(projectile);
                 // Remove the projectile mesh from the scene.
                 scene.remove(projectile);
                 // Remove the projectile from the projectiles array.
@@ -1301,10 +1318,14 @@ function animate(currentTime) {
             const enemyProjectile = enemyProjectiles[k];
             // Check if the projectile is close to the enemy projectile.
             if (projectile.position.distanceTo(enemyProjectile.position) < 0.5) {
+                // Stop the hum sound for the player projectile.
+                removeHumFromProjectile(projectile);
                 // Remove the player projectile from the scene.
                 scene.remove(projectile);
                 // Remove the player projectile from the array.
                 projectiles.splice(i, 1);
+                // Stop the hum sound for the enemy projectile.
+                removeHumFromProjectile(enemyProjectile);
                 // Remove the enemy projectile from the scene.
                 scene.remove(enemyProjectile);
                 // Remove the enemy projectile from its array.
@@ -1320,6 +1341,8 @@ function animate(currentTime) {
             const enemy = enemies[j];
             // Check if the projectile is close to the enemy.
             if (projectile.position.distanceTo(enemy.position) < 1.5) {
+                // Stop the hum sound for this projectile.
+                removeHumFromProjectile(projectile);
                 // Remove the projectile from the scene.
                 scene.remove(projectile);
                 // Remove the projectile from the array.
@@ -1357,6 +1380,8 @@ function animate(currentTime) {
         projectile.position.add(projectile.velocity);
         // Remove the projectile if it travels too far from its spawn position.
         if (projectile.position.distanceTo(projectile.spawnPosition) > 100) {
+            // Stop the hum sound for this projectile.
+            removeHumFromProjectile(projectile);
             // Remove the projectile mesh from the scene.
             scene.remove(projectile);
             // Remove the projectile from the enemy projectiles array.
@@ -1366,6 +1391,8 @@ function animate(currentTime) {
         }
         // Remove the projectile if it hits an obstacle.
         if (collidesWithObstacles(projectile.position, 0.5)) {
+            // Stop the hum sound for this projectile.
+            removeHumFromProjectile(projectile);
             // Remove the projectile mesh from the scene.
             scene.remove(projectile);
             // Remove the projectile from the enemy projectiles array.
@@ -1376,6 +1403,8 @@ function animate(currentTime) {
 
         // Remove the enemy projectile if it leaves the ground plane.
         if (Math.abs(projectile.position.x) > 250 || Math.abs(projectile.position.z) > 250) {
+            // Stop the hum sound for this projectile.
+            removeHumFromProjectile(projectile);
             // Remove the projectile mesh from the scene.
             scene.remove(projectile);
             // Remove the projectile from the enemy projectiles array.
@@ -1386,6 +1415,8 @@ function animate(currentTime) {
 
         // Check for collision with the player.
         if (projectile.position.distanceTo(yawObject.position) < 1) {
+            // Stop the hum sound for this projectile.
+            removeHumFromProjectile(projectile);
             // Remove the projectile from the scene.
             scene.remove(projectile);
             // Remove the projectile from the array.
@@ -1405,8 +1436,18 @@ function animate(currentTime) {
                     const qualifies = highScores.length < MAX_HIGH_SCORES || score > Math.min(...highScores.map(entry => entry.score));
                     // Check if the score qualifies for the top five.
                     if (qualifies) {
+                        // Stop all projectile hums so the prompt is silent.
+                        if (typeof stopAllProjectileHums === 'function') {
+                            // Call the function when it exists.
+                            stopAllProjectileHums();
+                        }
                         // Prompt the player for their name or use a default value.
                         const playerName = prompt('Enter your name:', DEFAULT_PLAYER_NAME) || DEFAULT_PLAYER_NAME;
+                        // Stop any hum that may have restarted after the prompt.
+                        if (typeof stopAllProjectileHums === 'function') {
+                            // Call the function to ensure silence.
+                            stopAllProjectileHums();
+                        }
                         // Add the new score to the high scores array.
                         highScores.push({ name: playerName, score: score });
                         // Sort high scores in descending order.
@@ -1432,6 +1473,11 @@ function animate(currentTime) {
                     gameOver = true;
                     // Stop the soundtrack when the game ends.
                     stopSoundtrack();
+                    // Stop all projectile hums because gameplay has ended.
+                    if (typeof stopAllProjectileHums === 'function') {
+                        // Call the function when it exists.
+                        stopAllProjectileHums();
+                    }
                     // Release the mouse pointer.
                     document.exitPointerLock();
                 }
@@ -1583,6 +1629,11 @@ function resetGameState() {
     verticalVelocity = 0;
     // Set the player as grounded.
     isGrounded = true;
+    // Stop hum sounds for all existing projectiles.
+    if (typeof stopAllProjectileHums === 'function') {
+        // Call the function when it exists.
+        stopAllProjectileHums();
+    }
     // Reset the player position on the x axis.
     yawObject.position.x = 0;
     // Reset the player position on the y axis.
