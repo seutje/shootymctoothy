@@ -233,12 +233,16 @@ function collidesWithObstacles(position, radius) {
         // Get the current obstacle.
         const obstacle = obstacles[i];
         // Define half size of the obstacle for bounds checking.
-        const halfSize = 2.5;
-        // Check for overlap on the x and z axes.
-        if (Math.abs(position.x - obstacle.position.x) < halfSize + radius &&
-            Math.abs(position.z - obstacle.position.z) < halfSize + radius) {
-            // Return true if there is a collision.
-            return true;
+        const halfSize = 2.5; // Define half size of the obstacle for bounds checking.
+        // Calculate the absolute x distance from the obstacle center.
+        const dx = Math.abs(position.x - obstacle.position.x);
+        // Calculate the absolute y distance from the obstacle center.
+        const dy = Math.abs(position.y - obstacle.position.y);
+        // Calculate the absolute z distance from the obstacle center.
+        const dz = Math.abs(position.z - obstacle.position.z);
+        // Check for overlap on all three axes to detect collisions.
+        if (dx < halfSize + radius && dy < halfSize + radius && dz < halfSize + radius) {
+            return true; // Return true if there is a collision.
         }
     }
     // Return false if no collisions were detected.
