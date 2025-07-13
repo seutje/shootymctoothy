@@ -730,29 +730,32 @@ function createProjectile() {
         const raycaster = new THREE.Raycaster(start, dir, 0, lightningRange);
         // Find enemy objects intersected by the ray.
         const hits = raycaster.intersectObjects(enemies, false);
-        // Check if an enemy was hit by the lightning.
+        // Check if at least one enemy was hit.
         if (hits.length > 0) {
-            // Get the first enemy that was hit.
-            const enemy = hits[0].object;
-            // Store the enemy position for item drops.
-            const dropPos = enemy.position.clone();
-            // Respawn the enemy at a new location.
-            const respawn = findEnemySpawnPosition();
-            // Set the enemy's x position.
-            enemy.position.x = respawn.x;
-            // Set the enemy's z position.
-            enemy.position.z = respawn.z;
-            // Set the enemy's y position.
-            enemy.position.y = respawn.y;
-            // Increase the score for the kill.
-            score += 10;
-            // Increase the kill count.
-            killCount++;
-            // Drop a health pack every three kills.
-            if (killCount % 3 === 0) {
-                // Create a health pack at the drop position.
-                createHealthPack(dropPos);
-            }
+            // Loop over every hit in the list.
+            hits.forEach(hit => {
+                // Get the enemy mesh from this hit.
+                const enemy = hit.object;
+                // Store the enemy position for item drops.
+                const dropPos = enemy.position.clone();
+                // Respawn the enemy at a new location.
+                const respawn = findEnemySpawnPosition();
+                // Set the enemy's x position.
+                enemy.position.x = respawn.x;
+                // Set the enemy's z position.
+                enemy.position.z = respawn.z;
+                // Set the enemy's y position.
+                enemy.position.y = respawn.y;
+                // Increase the score for the kill.
+                score += 10;
+                // Increase the kill count.
+                killCount++;
+                // Drop a health pack every three kills.
+                if (killCount % 3 === 0) {
+                    // Create a health pack at the drop position.
+                    createHealthPack(dropPos);
+                }
+            });
         }
         // Create a cylinder geometry for the lightning beam visual.
         const beamGeometry = new THREE.CylinderGeometry(0.05, 0.05, lightningRange, 8);
