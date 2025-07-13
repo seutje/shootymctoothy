@@ -17,7 +17,7 @@ function drawCrosshair() {
     // Draw to the end of the vertical line.
     uiContext.lineTo(uiCanvas.width / 2, uiCanvas.height / 2 + 10);
     // Render the lines on the canvas.
-uiContext.stroke();
+    uiContext.stroke();
 }
 
 // Function to draw weapon icons at the bottom of the screen.
@@ -27,6 +27,7 @@ function drawWeaponIcons() {
     const totalWidth = iconSize * 3 + padding * 2; // Width of all icons combined.
     const startX = (uiCanvas.width - totalWidth) / 2; // Center starting x position.
     const y = uiCanvas.height - iconSize - 10; // Y position of the icons.
+    // Loop over each weapon to draw its icon.
     for (let i = 0; i < 3; i++) {
         const x = startX + i * (iconSize + padding); // Calculate the x position for this icon.
         uiContext.fillStyle = 'black'; // Fill the icon background with black.
@@ -35,9 +36,9 @@ function drawWeaponIcons() {
         uiContext.lineWidth = 2; // Use a two pixel border.
         uiContext.strokeRect(x, y, iconSize, iconSize); // Draw the border.
         if (i === 0) {
-            uiContext.fillStyle = 'yellow'; // Use yellow for the gun.
-            uiContext.fillRect(x + 10, y + 20, iconSize - 20, 8); // Draw the gun barrel.
-            uiContext.fillRect(x + iconSize / 2 - 4, y + 28, 8, 15); // Draw the gun handle.
+            uiContext.fillStyle = 'yellow'; // Use yellow for the pistol.
+            uiContext.fillRect(x + 8, y + 18, iconSize - 16, 8); // Draw the pistol barrel.
+            uiContext.fillRect(x + iconSize - 16, y + 26, 8, 16); // Draw the pistol handle.
         } else if (i === 1) {
             uiContext.fillStyle = 'red'; // Use red for the rocket launcher.
             uiContext.fillRect(x + iconSize / 2 - 4, y + 10, 8, iconSize - 20); // Draw the launcher barrel.
