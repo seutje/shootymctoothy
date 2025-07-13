@@ -330,6 +330,8 @@ const projectiles = [];
 const enemyProjectiles = [];
 // Create an array to store explosion meshes.
 const explosions = [];
+// Create an array to store lights for rocket explosions.
+const explosionLights = [];
 // Create an array to store lightning beam meshes.
 const lightningBeams = [];
 
@@ -1044,6 +1046,16 @@ function explodeRocket(position) {
     explosion.spawnTime = Date.now();
     // Add the explosion mesh to the scene.
     scene.add(explosion);
+    // Create a point light for the explosion flash.
+    const explosionLight = new THREE.PointLight(0xffaa00, 1, 10);
+    // Set the light position to match the explosion.
+    explosionLight.position.copy(position);
+    // Record the spawn time for removal later.
+    explosionLight.spawnTime = Date.now();
+    // Add the explosion light to the scene.
+    scene.add(explosionLight);
+    // Add the explosion light to the explosionLights array.
+    explosionLights.push(explosionLight);
     // Play a spatial sound effect at the explosion position.
     playExplosionSound(position);
     // Add the explosion to the explosions array.
@@ -1738,6 +1750,18 @@ function animate(currentTime) {
             explosions.splice(i, 1);
         }
     }
+    // Update each explosion light and remove old ones.
+    for (let i = explosionLights.length - 1; i >= 0; i--) {
+        // Get the current explosion light.
+        const light = explosionLights[i];
+        // Remove the light after one hundred milliseconds.
+        if (Date.now() - light.spawnTime > 100) {
+            // Remove the light from the scene.
+            scene.remove(light);
+            // Remove the light from the array.
+            explosionLights.splice(i, 1);
+        }
+    }
 
     // Update each lightning beam and remove old ones.
     for (let i = lightningBeams.length - 1; i >= 0; i--) {
@@ -1917,6 +1941,13 @@ function resetGameState() {
     });
     // Clear the explosions array.
     explosions.length = 0;
+    // Remove all existing explosion lights from the scene.
+    explosionLights.forEach(light => {
+        // Remove this light from the scene graph.
+        scene.remove(light);
+    });
+    // Clear the explosion lights array.
+    explosionLights.length = 0;
     // Remove all existing health packs from the scene.
     healthPacks.forEach(pack => {
         // Remove this health pack from the scene graph.
