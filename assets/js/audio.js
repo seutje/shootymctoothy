@@ -352,6 +352,50 @@ function removeHumFromProjectile(projectile) {
     }
 }
 
+// Function to play a spatial rocket explosion sound.
+function playExplosionSound(position) {
+    // Create a buffer lasting one second for the explosion noise.
+    const buffer = audioContext.createBuffer(1, audioContext.sampleRate, audioContext.sampleRate);
+    // Get the data array from the buffer for modification.
+    const data = buffer.getChannelData(0);
+    // Fill the buffer with decaying random noise values.
+    for (let i = 0; i < data.length; i++) {
+        // Calculate a linear decay factor over the sample range.
+        const decay = 1 - i / data.length;
+        // Store a random value scaled by the decay factor.
+        data[i] = (Math.random() * 2 - 1) * decay;
+    }
+    // Create a positional audio object using the global listener.
+    const sound = new THREE.PositionalAudio(listener);
+    // Assign the generated buffer to the audio object.
+    sound.setBuffer(buffer);
+    // Set the explosion volume to a moderate level.
+    sound.setVolume(0.3);
+    // Set the reference distance for the positional effect.
+    sound.setRefDistance(2);
+    // Create a temporary object to hold the sound at the position.
+    const holder = new THREE.Object3D();
+    // Copy the explosion position to the holder object.
+    holder.position.copy(position);
+    // Attach the sound to the holder.
+    holder.add(sound);
+    // Add the holder to the scene so the sound plays in space.
+    scene.add(holder);
+    // Start the explosion sound immediately.
+    sound.play();
+    // Remove the sound and holder after one second.
+    setTimeout(() => {
+        // Stop the sound playback.
+        sound.stop();
+        // Disconnect the sound from the audio graph.
+        sound.disconnect();
+        // Remove the sound from its holder.
+        holder.remove(sound);
+        // Remove the holder from the scene.
+        scene.remove(holder);
+    }, 1000);
+}
+
 
 // The function to set the master volume.
 function setVolume(level) {

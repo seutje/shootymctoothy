@@ -883,6 +883,8 @@ function explodeRocket(position) {
     explosion.spawnTime = Date.now();
     // Add the explosion mesh to the scene.
     scene.add(explosion);
+    // Play a spatial sound effect at the explosion position.
+    playExplosionSound(position);
     // Add the explosion to the explosions array.
     explosions.push(explosion);
     // Check each enemy to apply splash damage.
