@@ -40,6 +40,19 @@ sunLight.castShadow = true;
 // Add the sun light to the scene.
 scene.add(sunLight);
 
+// Create a box geometry for a cube marking the sun position.
+const sunCubeGeometry = new THREE.BoxGeometry(5, 5, 5);
+// Create a material for the sun cube using a lime color.
+const sunCubeMaterial = new THREE.MeshLambertMaterial({ color: 0x00ff00 });
+// Create a mesh from the sun cube geometry and material.
+const sunCube = new THREE.Mesh(sunCubeGeometry, sunCubeMaterial);
+// Copy the sun light position so the cube overlaps it.
+sunCube.position.copy(sunLight.position);
+// Allow the sun cube to cast shadows like the sun light.
+sunCube.castShadow = true;
+// Add the sun cube to the scene.
+scene.add(sunCube);
+
 // Create a plane geometry for the ground.
 const groundGeometry = new THREE.PlaneGeometry(500, 500);
 // Create a texture object to hold the ground image.
