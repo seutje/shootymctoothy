@@ -8,6 +8,10 @@ const textureLoader = new THREE.TextureLoader();
 const skyTexture = textureLoader.load('assets/images/texture-sky.png');
 // Set the texture mapping mode for reflections.
 skyTexture.mapping = THREE.EquirectangularReflectionMapping;
+// Center the sky texture rotation on its middle.
+skyTexture.center.set(0.5, 0.5);
+// Rotate the sky texture forty five degrees clockwise.
+skyTexture.rotation = -Math.PI / 4;
 // Use the texture as the background of the scene.
 scene.background = skyTexture;
 // Use the same texture for environment reflections.
