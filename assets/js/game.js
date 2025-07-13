@@ -448,6 +448,8 @@ const rocketShotInterval = 800;
 const lightningShotInterval = 300;
 // Define the maximum range of the lightning gun.
 const lightningRange = 100;
+// Duration in milliseconds for the lightning beam to fade out.
+const lightningFadeDuration = 100;
 // Define how far the gun moves up and down when bobbing.
 const gunBobAmplitude = 0.05;
 // Define how quickly the bobbing motion slows down.
@@ -761,6 +763,10 @@ function createProjectile() {
         const beamGeometry = new THREE.CylinderGeometry(0.05, 0.05, lightningRange, 8);
         // Create a blue material for the beam.
         const beamMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff });
+        // Enable transparency so the beam can fade out.
+        beamMaterial.transparent = true;
+        // Set full opacity initially for a solid beam.
+        beamMaterial.opacity = 1;
         // Create the beam mesh from the geometry and material.
         const beam = new THREE.Mesh(beamGeometry, beamMaterial);
         // Create a quaternion to align the beam with the direction.
@@ -1508,8 +1514,12 @@ function animate(currentTime) {
     for (let i = lightningBeams.length - 1; i >= 0; i--) {
         // Get the current lightning beam.
         const beam = lightningBeams[i];
-        // Remove the beam after one tenth of a second.
-        if (Date.now() - beam.spawnTime > 100) {
+        // Calculate the time since the beam spawned.
+        const elapsed = Date.now() - beam.spawnTime;
+        // Reduce the beam opacity based on the elapsed time.
+        beam.material.opacity = 1 - (elapsed / lightningFadeDuration);
+        // Remove the beam when fully transparent.
+        if (elapsed > lightningFadeDuration) {
             // Remove the beam mesh from the scene.
             scene.remove(beam);
             // Remove the beam from the array.
