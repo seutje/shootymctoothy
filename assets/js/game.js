@@ -1050,8 +1050,6 @@ function explodeRocket(position) {
     const explosionLight = new THREE.PointLight(0xffaa00, 1, 10);
     // Set the light position to match the explosion.
     explosionLight.position.copy(position);
-    // Enable shadows for this light to add depth.
-    explosionLight.castShadow = true;
     // Record the spawn time for removal later.
     explosionLight.spawnTime = Date.now();
     // Add the explosion light to the scene.
