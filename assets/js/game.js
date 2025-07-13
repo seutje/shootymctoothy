@@ -21,13 +21,10 @@ attachAudioListener(camera);
 const renderer = new THREE.WebGLRenderer();
 // Set the size of the renderer to the window size.
 renderer.setSize(window.innerWidth, window.innerHeight);
+// Enable shadows in the renderer.
+renderer.shadowMap.enabled = true;
 // Append the renderer to the document body.
 document.body.appendChild(renderer.domElement);
-
-// Create a blue ambient light with an intensity of 0.5.
-const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
-// Add the ambient light to the scene.
-scene.add(ambientLight);
 
 // Create a white directional light with an intensity of 0.5.
 const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
@@ -35,6 +32,14 @@ const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
 directionalLight.position.set(1, 1, 1);
 // Add the directional light to the scene.
 scene.add(directionalLight);
+// Create a dimmer point light that represents the sun.
+const sunLight = new THREE.PointLight(0xffffff, 0.5, 0);
+// Position the sun light high above the scene.
+sunLight.position.set(50, 100, 50);
+// Allow the sun light to cast shadows.
+sunLight.castShadow = true;
+// Add the sun light to the scene.
+scene.add(sunLight);
 
 // Create a plane geometry for the ground.
 const groundGeometry = new THREE.PlaneGeometry(500, 500);
@@ -63,6 +68,8 @@ const groundMaterial = new THREE.MeshStandardMaterial({ map: groundTexture });
 const ground = new THREE.Mesh(groundGeometry, groundMaterial);
 // Rotate the ground to be horizontal.
 ground.rotation.x = -Math.PI / 2;
+// Allow the ground to receive shadows.
+ground.receiveShadow = true;
 // Add the ground to the scene.
 scene.add(ground);
 
@@ -186,6 +193,8 @@ function createObstacle(x, z) {
     const obstacle = new THREE.Mesh(obstacleGeometry, obstacleMaterial);
     // Set the obstacle position.
     obstacle.position.set(x, 2.5, z);
+    // Allow the obstacle to cast shadows.
+    obstacle.castShadow = true;
     // Add the obstacle to the scene.
     scene.add(obstacle);
     // Add the obstacle to the obstacles array.
@@ -1208,6 +1217,8 @@ function createEnemy() {
     enemy.position.z = spawn.z;
     // Set the enemy's y position.
     enemy.position.y = spawn.y;
+    // Allow the enemy to cast shadows.
+    enemy.castShadow = true;
     // Set the last shot time for the enemy.
     enemy.lastShotTime = Date.now();
     // Set the shot interval for the enemy (randomized).
