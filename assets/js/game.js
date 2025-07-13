@@ -415,7 +415,7 @@ const groundAcceleration = 0.02;
 // Define how quickly the player accelerates while in the air.
 const airAcceleration = 0.01;
 // Define the friction applied when the player is on the ground.
-const groundFriction = 0.8;
+const groundFriction = 0.9;
 // Define the friction applied when the player is in the air.
 const airFriction = 0.99;
 // Define the maximum speed the player can reach.
