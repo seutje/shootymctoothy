@@ -93,19 +93,23 @@ function updateAutoplayAI(currentTime) {
     const openDirs = getOpenDirections();
     // Check if a pack was found.
     if (pack) {
-        // Calculate the difference on the x axis.
-        const dx = pack.position.x - yawObject.position.x;
-        // Calculate the difference on the z axis.
-        const dz = pack.position.z - yawObject.position.z;
+        // Create a vector that points from the player to the pack.
+        const toPack = pack.position.clone().sub(yawObject.position);
+        // Rotate the vector into the player's local space.
+        toPack.applyAxisAngle(new THREE.Vector3(0, 1, 0), -yawObject.rotation.y);
+        // Store the horizontal distance in local space.
+        const localX = toPack.x;
+        // Store the depth distance in local space.
+        const localZ = toPack.z;
         // Choose a desired direction toward the pack.
         let desired;
         // Decide whether horizontal or depth movement is greater.
-        if (Math.abs(dx) > Math.abs(dz)) {
+        if (Math.abs(localX) > Math.abs(localZ)) {
             // Move right if the pack is to the right.
-            desired = dx > 0 ? 'd' : 'a';
+            desired = localX > 0 ? 'd' : 'a';
         } else {
             // Move forward if the pack is ahead.
-            desired = dz > 0 ? 's' : 'w';
+            desired = localZ < 0 ? 'w' : 's';
         }
         // Use the desired direction if it is clear.
         if (openDirs.includes(desired)) {
