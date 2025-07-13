@@ -939,6 +939,62 @@ function explodeRocket(position) {
         verticalVelocity = Math.max(verticalVelocity, 0.2);
         // Mark the player as airborne because of the blast.
         isGrounded = false;
+        // Check if the player's health has reached zero.
+        if (health <= 0) {
+            // Set the game over flag.
+            gameOver = true;
+            // Only record high scores when not in autoplay mode.
+            if (!autoplay) {
+                // Determine if the current score qualifies for the high score list.
+                const qualifies = highScores.length < MAX_HIGH_SCORES || score > Math.min(...highScores.map(entry => entry.score));
+                // Check if the score qualifies for the top five.
+                if (qualifies) {
+                    // Stop all sounds before showing the prompt.
+                    stopSoundtrack();
+                    if (typeof stopAllProjectileHums === 'function') {
+                        stopAllProjectileHums();
+                    }
+                    // Prompt the player for their name or use a default value.
+                    const playerName = prompt('Enter your name:', DEFAULT_PLAYER_NAME) || DEFAULT_PLAYER_NAME;
+                    // Stop any hum that may have restarted after the prompt.
+                    if (typeof stopAllProjectileHums === 'function') {
+                        // Call the function to ensure silence.
+                        stopAllProjectileHums();
+                    }
+                    // Add the new score to the high scores array.
+                    highScores.push({ name: playerName, score: score });
+                    // Sort high scores in descending order.
+                    highScores.sort((a, b) => b.score - a.score);
+                    // Keep only the top 5 scores.
+                    highScores = highScores.slice(0, MAX_HIGH_SCORES);
+                    // Save high scores to local storage.
+                    saveHighScores();
+                }
+            }
+            // Check if autoplay mode is active.
+            if (autoplay) {
+                // Reset the game state for a fresh demo.
+                resetGameState();
+                // Restart the autoplay demo.
+                startAutoplay();
+                // Clear the game over flag so the overlay does not show.
+                gameOver = false;
+            } else {
+                // Stop the animation loop when the player dies.
+                gamePaused = true;
+                // Indicate that the game has ended.
+                gameOver = true;
+                // Stop the soundtrack when the game ends.
+                stopSoundtrack();
+                // Stop all projectile hums because gameplay has ended.
+                if (typeof stopAllProjectileHums === 'function') {
+                    // Call the function when it exists.
+                    stopAllProjectileHums();
+                }
+                // Release the mouse pointer.
+                document.exitPointerLock();
+            }
+        }
     }
 }
 
