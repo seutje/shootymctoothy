@@ -33,14 +33,21 @@ else {
   // Append the buttons container to the controls.
   controls.appendChild(buttons);
 
+  // Create a row to hold the fire and jump buttons side by side.
+  const actionRow = document.createElement('div');
+  // Assign the row class for horizontal layout.
+  actionRow.className = 'btn-row';
+  // Append the action row to the buttons container.
+  buttons.appendChild(actionRow);
+
   // Create the fire button.
   const fireBtn = document.createElement('div');
   // Assign the button classes for size and style.
   fireBtn.className = 'btn btn-fire';
   // Set the button label.
   fireBtn.textContent = 'FIRE';
-  // Append the fire button to the buttons container.
-  buttons.appendChild(fireBtn);
+  // Append the fire button to the action row.
+  actionRow.appendChild(fireBtn);
 
   // Create the jump button.
   const jumpBtn = document.createElement('div');
@@ -48,8 +55,8 @@ else {
   jumpBtn.className = 'btn btn-jump';
   // Set the button label.
   jumpBtn.textContent = 'JUMP';
-  // Append the jump button below the fire button.
-  buttons.appendChild(jumpBtn);
+  // Append the jump button next to the fire button.
+  actionRow.appendChild(jumpBtn);
 
   // Create the small buttons row container.
   const smallRow = document.createElement('div');
