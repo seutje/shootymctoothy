@@ -2475,6 +2475,30 @@ function animate(currentTime) {
             enemy1.velocity.z *= -1;
         }
 
+        // Make the enemy face toward the player horizontally.
+        const toPlayer = new THREE.Vector3(); // Create a vector to store the direction to the player.
+        // Calculate the vector from the enemy to the player.
+        toPlayer.subVectors(yawObject.position, enemy1.position); // Subtract enemy position from player position.
+        // Ignore vertical component to keep the rotation on the ground plane.
+        toPlayer.y = 0; // Zero out the y component so we only rotate around the y axis.
+        // Check that the direction vector has a valid length to avoid NaN angles.
+        if (toPlayer.lengthSq() > 1e-6) { // Ensure the vector is non-zero before computing the angle.
+            // Compute the desired yaw angle so the enemy faces the player.
+            let desiredYaw = Math.atan2(-toPlayer.x, -toPlayer.z); // Use atan2 to find the heading toward the player.
+            // Flip the facing by 180 degrees because models currently point backward relative to forward.
+            desiredYaw += Math.PI; // Add pi radians to rotate the model to face the aim direction.
+            // Read the enemy's current yaw rotation.
+            const currentYaw = enemy1.rotation.y; // Get the current rotation around the y axis.
+            // Compute the wrapped difference to rotate along the shortest path.
+            let deltaYaw = desiredYaw - currentYaw; // Calculate how far we need to rotate.
+            // Wrap the delta to the range [-pi, pi] for smooth interpolation.
+            deltaYaw = Math.atan2(Math.sin(deltaYaw), Math.cos(deltaYaw)); // Normalize the angle difference.
+            // Choose a smoothing factor to avoid instant snapping.
+            const turnSmoothing = 0.2; // Set how quickly the enemy turns toward the target direction.
+            // Apply the smoothed rotation update to face the player.
+            enemy1.rotation.y = currentYaw + deltaYaw * turnSmoothing; // Increment the yaw toward the desired facing.
+        }
+
         // Check for collisions with other enemies.
         for (let j = i + 1; j < enemies.length; j++) {
             // Get the other enemy.
