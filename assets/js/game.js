@@ -611,7 +611,9 @@ function loadPistolModel() { // Define a function to asynchronously load the pis
         // Apply the configured scale to the pistol instance.
         pistolObject.scale.setScalar(PISTOL_MODEL_SCALE); // Scale the pistol uniformly.
         // Position the pistol near the prior simple gun placement.
-        pistolObject.position.copy(gunBasePosition); // Reuse the first person weapon offset.
+        pistolObject.position.copy(PISTOL_MODEL_OFFSET); // Use the configured first person pistol offset.
+        // Flip the pistol to face forward (180 degrees yaw).
+        pistolObject.rotation.y += PISTOL_YAW_OFFSET; // Rotate the pistol around y by pi radians.
         // Ensure the pistol meshes respect lighting and quality settings.
         pistolObject.traverse(o => { if (o.isMesh) { o.castShadow = HIGH_QUALITY; o.receiveShadow = HIGH_QUALITY; } }); // Configure mesh flags.
         // Attach the pistol model to the camera so it moves with the view.
@@ -624,19 +626,39 @@ function loadPistolModel() { // Define a function to asynchronously load the pis
             const source = gltf.animations[0]; // Select the first clip from the model.
             // Extract subclips for the required actions using frame ranges.
             const fireClip = THREE.AnimationUtils.subclip(source, 'fire', 0, 11, 30); // Create a subclip for firing.
-            const readyClip = THREE.AnimationUtils.subclip(source, 'ready', 187, 233, 30); // Create a subclip for ready.
+            const reloadAClip = THREE.AnimationUtils.subclip(source, 'reloadA', 12, 82, 30); // Create a subclip for the first reload segment.
+            const fireLastClip = THREE.AnimationUtils.subclip(source, 'firelast', 83, 94, 30); // Create a subclip for the last-shot fire.
+            const reloadBClip = THREE.AnimationUtils.subclip(source, 'reloadB', 95, 175, 30); // Create a subclip for the second reload segment.
             const hideClip = THREE.AnimationUtils.subclip(source, 'hide', 176, 187, 30); // Create a subclip for hide.
+            const readyClip = THREE.AnimationUtils.subclip(source, 'ready', 187, 233, 30); // Create a subclip for ready.
             const ambientClip = THREE.AnimationUtils.subclip(source, 'ambient', 234, 264, 30); // Create a subclip for ambient idle.
             // Create actions for each subclip and store them.
             pistolActions.fire = pistolMixer.clipAction(fireClip); // Build an action for the fire animation.
-            pistolActions.ready = pistolMixer.clipAction(readyClip); // Build an action for the ready animation.
+            pistolActions.reloadA = pistolMixer.clipAction(reloadAClip); // Build an action for the first reload segment.
+            pistolActions.firelast = pistolMixer.clipAction(fireLastClip); // Build an action for the last-shot fire animation.
+            pistolActions.reloadB = pistolMixer.clipAction(reloadBClip); // Build an action for the second reload segment.
             pistolActions.hide = pistolMixer.clipAction(hideClip); // Build an action for the hide animation.
+            pistolActions.ready = pistolMixer.clipAction(readyClip); // Build an action for the ready animation.
             pistolActions.ambient = pistolMixer.clipAction(ambientClip); // Build an action for the ambient idle animation.
         }
         // Resume ambient after any one-shot action completes if the pistol is selected.
         pistolMixer.addEventListener('finished', () => { // Listen for animation completion events.
             // Check that the pistol is still the active weapon and visible.
             if (currentWeapon === 0 && pistolObject && pistolObject.visible) { // Ensure the pistol is selected and shown.
+                // Chain reload segments when appropriate.
+                if (pistolActiveActionName === 'reloadA' && pistolActions.reloadB) { // Check if the first reload segment just finished.
+                    // Play the second segment of the reload.
+                    playPistolAction('reloadB', true); // Trigger the follow-up reload animation segment.
+                    // Exit to avoid starting ambient immediately.
+                    return; // Stop further handling to let reloadB run.
+                }
+                // Complete the reload when the second segment finishes.
+                if (pistolActiveActionName === 'reloadB') { // Check if the second reload segment just finished.
+                    // Restore the pistol ammunition to full magazine.
+                    pistolAmmo = PISTOL_MAG_SIZE; // Refill the pistol ammo after reload completes.
+                    // Clear the reloading state so firing is allowed again.
+                    pistolReloading = false; // Mark that reloading has ended.
+                }
                 // Play the ambient idle loop to keep the pistol animated when idle.
                 playPistolAction('ambient', false); // Switch to looping ambient animation.
             }
@@ -1107,13 +1129,15 @@ function getPlayerSurfaceY() { // Define a function that returns the cached or f
 } // End of getPlayerSurfaceY helper.
 
 // Step size used when nudging the player via debug keys.
-const DEBUG_NUDGE_STEP = 0.5; // Set the base increment for player position nudging.
+const DEBUG_NUDGE_STEP = 0.02; // Set a finer base increment for pistol offset nudging.
 // Multiplier applied when holding Shift during a nudge.
 const DEBUG_NUDGE_MULTIPLIER = 10; // Increase the nudge distance when Shift is held.
-// Helper to print the player's current world position to the console.
-function debugLogPlayerPosition() { // Define a function to log the player position.
-    // Log the current player position with two decimal places for readability.
-    console.log(`Player pos -> x: ${yawObject.position.x.toFixed(2)}, y: ${yawObject.position.y.toFixed(2)}, z: ${yawObject.position.z.toFixed(2)}`); // Output the player coordinates.
+// Helper to print the pistol's current local position to the console.
+function debugLogPistolPosition() { // Define a function to log the pistol offset.
+    // Choose the pistol object when available, otherwise fall back to the placeholder group.
+    const obj = pistolObject ? pistolObject : gunGroup; // Select the object whose offset is edited.
+    // Log the current local position with two decimal places for readability.
+    console.log(`Pistol offset -> x: ${obj.position.x.toFixed(2)}, y: ${obj.position.y.toFixed(2)}, z: ${obj.position.z.toFixed(2)}`); // Output the pistol's local coordinates.
 }
 
 // Track whether the left mouse button is held down.
@@ -1153,6 +1177,8 @@ let currentWeapon = 0;
 const PISTOL_MODEL_PATH = 'assets/models/pistol/'; // Define the base path for the pistol model assets.
 const PISTOL_MODEL_FILE = 'scene.gltf'; // Define the filename for the pistol model file.
 const PISTOL_MODEL_SCALE = 1.0; // Define the uniform scale to apply to the pistol model.
+const PISTOL_YAW_OFFSET = Math.PI; // Rotate the pistol by 180 degrees around the y axis.
+const PISTOL_MODEL_OFFSET = new THREE.Vector3(0.04, -0.20, -0.08); // Set the default pistol offset relative to the camera.
 // References used to manage the pistol model instance and animation.
 let pistolTemplate = null; // Store the loaded pistol template scene for cloning.
 let pistolObject = null; // Store the pistol instance attached to the camera.
@@ -1160,6 +1186,12 @@ let pistolMixer = null; // Store the AnimationMixer for controlling pistol anima
 let pistolActions = {}; // Store a map from action name to AnimationAction for easy control.
 let pistolActiveActionName = null; // Track which pistol action is currently active.
 let pistolReady = false; // Track whether the pistol model has finished loading and is ready.
+// Define the pistol magazine capacity in bullets.
+const PISTOL_MAG_SIZE = 20; // Set the pistol magazine size to twenty rounds.
+// Track how many bullets remain in the current magazine.
+let pistolAmmo = PISTOL_MAG_SIZE; // Initialize the pistol ammunition count to a full magazine.
+// Track whether the pistol is currently reloading.
+let pistolReloading = false; // Set a flag indicating if the pistol is in a reload sequence.
 // Helper to play a specific pistol action by name.
 function playPistolAction(name, loopOnce = true) { // Define a function to play a pistol animation action.
     // Guard when the pistol is not ready or action missing.
@@ -1179,6 +1211,16 @@ function playPistolAction(name, loopOnce = true) { // Define a function to play 
     // Remember which action is currently active for idle handling.
     pistolActiveActionName = name; // Store the active action name.
 } // End of playPistolAction helper.
+
+// Helper to begin a pistol reload sequence.
+function startPistolReload() { // Define a function to initiate the pistol reload.
+    // Only start reloading when the pistol is ready, not already reloading, and the mag is not full.
+    if (!pistolReady || pistolReloading || pistolAmmo >= PISTOL_MAG_SIZE) { return; } // Exit if reload should not start.
+    // Mark the reload state as active to block firing.
+    pistolReloading = true; // Set reloading to true to prevent other actions.
+    // Play the first half of the reload animation.
+    playPistolAction('reloadA', true); // Trigger the initial reload animation segment.
+} // End of startPistolReload helper.
 
 // Helper to update the pistol mixer every frame when available.
 function updatePistolMixer(delta) { // Define a function to advance the pistol animation by delta time.
@@ -1297,49 +1339,49 @@ function onKeyDown(event) {
     keys[event.key.toLowerCase()] = true;
     // Calculate the nudge step based on whether Shift is held.
     const nudgeStep = (event.shiftKey ? DEBUG_NUDGE_STEP * DEBUG_NUDGE_MULTIPLIER : DEBUG_NUDGE_STEP); // Determine how far to move per key press.
-    // Handle debug nudging keys to reposition the player.
-    if (event.code === 'ArrowUp') { // Check for the up arrow key.
-        // Move the player forward along the z axis.
-        yawObject.position.z -= nudgeStep; // Decrease z to move forward in world space.
-        // Log the updated player position to the console.
-        debugLogPlayerPosition(); // Print the new coordinates for reference.
+    // Select the object to edit (pistol model or placeholder) when arrow/page keys are pressed.
+    const editObj = (event.code.startsWith('Arrow') || event.code === 'PageUp' || event.code === 'PageDown') ? (pistolObject ? pistolObject : gunGroup) : null; // Choose the pistol object for editing.
+    // Handle debug nudging keys to reposition the pistol relative to the camera.
+    if (editObj && event.code === 'ArrowUp') { // Check for the up arrow key.
+        // Move the pistol forward along the local z axis (toward the center of the screen).
+        editObj.position.z -= nudgeStep; // Decrease z to move the pistol forward.
+        // Log the updated pistol offset to the console.
+        debugLogPistolPosition(); // Print the new pistol coordinates for reference.
         // Prevent the browser from scrolling the page.
         event.preventDefault(); // Disable default arrow key behavior.
-    } else if (event.code === 'ArrowDown') { // Check for the down arrow key.
-        // Move the player backward along the z axis.
-        yawObject.position.z += nudgeStep; // Increase z to move backward in world space.
-        // Log the updated player position to the console.
-        debugLogPlayerPosition(); // Print the new coordinates for reference.
+    } else if (editObj && event.code === 'ArrowDown') { // Check for the down arrow key.
+        // Move the pistol backward along the local z axis (away from the screen).
+        editObj.position.z += nudgeStep; // Increase z to move the pistol backward.
+        // Log the updated pistol offset to the console.
+        debugLogPistolPosition(); // Print the new pistol coordinates for reference.
         // Prevent the browser from scrolling the page.
         event.preventDefault(); // Disable default arrow key behavior.
-    } else if (event.code === 'ArrowLeft') { // Check for the left arrow key.
-        // Move the player left along the x axis.
-        yawObject.position.x -= nudgeStep; // Decrease x to nudge left.
-        // Log the updated player position to the console.
-        debugLogPlayerPosition(); // Print the new coordinates for reference.
+    } else if (editObj && event.code === 'ArrowLeft') { // Check for the left arrow key.
+        // Move the pistol left along the local x axis.
+        editObj.position.x -= nudgeStep; // Decrease x to nudge the pistol left.
+        // Log the updated pistol offset to the console.
+        debugLogPistolPosition(); // Print the new pistol coordinates for reference.
         // Prevent the browser from scrolling the page.
         event.preventDefault(); // Disable default arrow key behavior.
-    } else if (event.code === 'ArrowRight') { // Check for the right arrow key.
-        // Move the player right along the x axis.
-        yawObject.position.x += nudgeStep; // Increase x to nudge right.
-        // Log the updated player position to the console.
-        debugLogPlayerPosition(); // Print the new coordinates for reference.
+    } else if (editObj && event.code === 'ArrowRight') { // Check for the right arrow key.
+        // Move the pistol right along the local x axis.
+        editObj.position.x += nudgeStep; // Increase x to nudge the pistol right.
+        // Log the updated pistol offset to the console.
+        debugLogPistolPosition(); // Print the new pistol coordinates for reference.
         // Prevent the browser from scrolling the page.
         event.preventDefault(); // Disable default arrow key behavior.
-    } else if (event.code === 'PageUp') { // Check for the PageUp key.
-        // Move the player upward along the y axis.
-        yawObject.position.y += nudgeStep; // Increase y to raise the player.
-        // Mark the player as airborne so gravity applies smoothly.
-        isGrounded = false; // Clear grounded state to avoid snapping.
-        // Log the updated player position to the console.
-        debugLogPlayerPosition(); // Print the new coordinates for reference.
+    } else if (editObj && event.code === 'PageUp') { // Check for the PageUp key.
+        // Move the pistol upward along the local y axis.
+        editObj.position.y += nudgeStep; // Increase y to raise the pistol.
+        // Log the updated pistol offset to the console.
+        debugLogPistolPosition(); // Print the new pistol coordinates for reference.
         // Prevent the browser from scrolling the page.
         event.preventDefault(); // Disable default page navigation behavior.
-    } else if (event.code === 'PageDown') { // Check for the PageDown key.
-        // Move the player downward along the y axis.
-        yawObject.position.y -= nudgeStep; // Decrease y to lower the player.
-        // Log the updated player position to the console.
-        debugLogPlayerPosition(); // Print the new coordinates for reference.
+    } else if (editObj && event.code === 'PageDown') { // Check for the PageDown key.
+        // Move the pistol downward along the local y axis.
+        editObj.position.y -= nudgeStep; // Decrease y to lower the pistol.
+        // Log the updated pistol offset to the console.
+        debugLogPistolPosition(); // Print the new pistol coordinates for reference.
         // Prevent the browser from scrolling the page.
         event.preventDefault(); // Disable default page navigation behavior.
     }
@@ -1386,6 +1428,11 @@ function onKeyDown(event) {
     if (event.key === '3' || event.key === '"') {
         // Switch to the lightning gun when pressing three or double quote.
         setWeapon(2);
+    }
+    // Check if the reload key was pressed.
+    if (event.key.toLowerCase() === 'r') {
+        // Initiate a pistol reload when the pistol is selected.
+        if (currentWeapon === 0) { startPistolReload(); }
     }
 }
 
@@ -1457,12 +1504,26 @@ function onMouseDown(event) {
     if (event.button === 0) {
         // Mark that the mouse button is held down.
         isMouseDown = true;
-        // Play the pistol fire animation when firing the pistol.
-        if (currentWeapon === 0) { playPistolAction('fire', true); }
-        // Create a projectile immediately.
-        createProjectile();
+        // Handle pistol-specific firing logic.
+        if (currentWeapon === 0) { // Check if the pistol is the active weapon.
+            // Block firing when the pistol is reloading.
+            if (pistolReloading) { return; } // Exit early during a reload.
+            // Start a reload when the magazine is empty.
+            if (pistolAmmo <= 0) { startPistolReload(); return; } // Trigger reload when out of ammo.
+            // Determine if this shot is the last in the magazine.
+            const isLastShot = pistolAmmo === 1; // Check whether the magazine will become empty after this shot.
+            // Play the correct firing animation for this shot.
+            playPistolAction(isLastShot ? 'firelast' : 'fire', true); // Use the last-shot animation when appropriate.
+            // Create a projectile immediately for the pistol.
+            createProjectile(); // Spawn the pistol bullet now that we fired.
+            // Decrease the pistol ammunition by one.
+            pistolAmmo -= 1; // Deduct a round from the magazine.
+        } else { // Handle non-pistol weapons.
+            // Create a projectile immediately for other weapons.
+            createProjectile(); // Spawn the projectile for the selected weapon.
+        }
         // Record the time of this shot using the high-resolution timer.
-        lastPlayerShotTime = performance.now();
+        lastPlayerShotTime = performance.now(); // Update the last shot timestamp.
     }
 }
 
