@@ -645,22 +645,18 @@ function loadPistolModel() { // Define a function to asynchronously load the pis
         pistolMixer.addEventListener('finished', () => { // Listen for animation completion events.
             // Check that the pistol is still the active weapon and visible.
             if (currentWeapon === 0 && pistolObject && pistolObject.visible) { // Ensure the pistol is selected and shown.
-                // Chain reload segments when appropriate.
-                if (pistolActiveActionName === 'reloadA' && pistolActions.reloadB) { // Check if the first reload segment just finished.
-                    // Play the second segment of the reload.
-                    playPistolAction('reloadB', true); // Trigger the follow-up reload animation segment.
-                    // Exit to avoid starting ambient immediately.
-                    return; // Stop further handling to let reloadB run.
-                }
-                // Complete the reload when the second segment finishes.
-                if (pistolActiveActionName === 'reloadB') { // Check if the second reload segment just finished.
+                // Complete the reload when either reload animation finishes.
+                if (pistolActiveActionName === 'reloadA' || pistolActiveActionName === 'reloadB') { // Check if a reload just finished.
                     // Restore the pistol ammunition to full magazine.
                     pistolAmmo = PISTOL_MAG_SIZE; // Refill the pistol ammo after reload completes.
                     // Clear the reloading state so firing is allowed again.
                     pistolReloading = false; // Mark that reloading has ended.
+                    // Start the ambient idle loop after reloading.
+                    playPistolAction('ambient', false); // Switch to looping ambient animation.
+                    return; // Stop here after handling reload completion.
                 }
-                // Play the ambient idle loop to keep the pistol animated when idle.
-                playPistolAction('ambient', false); // Switch to looping ambient animation.
+                // For other one-shot actions, resume ambient when appropriate.
+                playPistolAction('ambient', false); // Keep the pistol idling when not reloading.
             }
         }); // End of finished event listener.
         // Hide the simple placeholder pistol so only the model is shown when selected.
