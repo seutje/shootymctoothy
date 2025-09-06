@@ -36,6 +36,8 @@ const tmpVec3B = new THREE.Vector3(); // Allocate another temporary vector for i
 const collisionGridCellSize = 10; // Define the size of each grid cell in world units.
 // Spatial hash map from cell key to a list of box indices.
 const collisionGrid = new Map(); // Create a map to store which boxes occupy which cells.
+// Minimum thickness below which geometry is treated as pass-through.
+const THIN_OBJECT_MIN_THICKNESS = 1.5; // Increase threshold so slightly thicker objects are pass-through.
 
 // Helper to compute a grid cell index from a coordinate.
 function gridIndex(v) { // Define a function that converts a coordinate to a grid index.
@@ -134,6 +136,14 @@ function buildCollidersFromModel(root) { // Define a function that extracts coll
             const worldBox = obj.geometry.boundingBox.clone(); // Clone the local bounding box.
             // Apply the world matrix to move the box into world coordinates.
             worldBox.applyMatrix4(obj.matrixWorld); // Transform the bounding box into world space.
+            // Compute the world-space size of this mesh's bounds.
+            const worldSize = new THREE.Vector3(); // Prepare a vector to hold the box size.
+            // Measure the size along x, y, and z axes.
+            worldBox.getSize(worldSize); // Calculate dimensions of the transformed box.
+            // Decide if the object should count as thin for collision purposes.
+            const isThin = Math.min(worldSize.x, worldSize.y, worldSize.z) < THIN_OBJECT_MIN_THICKNESS; // Check the smallest extent.
+            // Record the thinness on the mesh for later ray-based filtering.
+            obj.userData.isThin = isThin; // Store a flag indicating thin geometry.
             // Store the transformed world-space bounding box.
             collisionBoxes.push(worldBox); // Save the world-space box for simple collision checks.
             // Index this box into the spatial grid for fast queries.
@@ -141,6 +151,21 @@ function buildCollidersFromModel(root) { // Define a function that extracts coll
         }
     });
 } // End of buildCollidersFromModel helper.
+
+// Helper to determine if a raycast object belongs to thin geometry.
+function isThinHitObject(obj) { // Define a function to detect thin meshes in a hierarchy.
+    // Start from the provided object.
+    let cur = obj; // Initialize the traversal pointer.
+    // Traverse upward until a flag is found or the root is reached.
+    while (cur) { // Continue while there is a valid object.
+        // Return the stored thin flag when present.
+        if (cur.userData && typeof cur.userData.isThin === 'boolean') { return cur.userData.isThin; } // Use the mesh flag if available.
+        // Move to the parent node in the hierarchy.
+        cur = cur.parent; // Ascend to the parent object.
+    }
+    // Default to solid when no information is available.
+    return false; // Assume not thin if unknown.
+} // End of isThinHitObject helper.
 
 // Helper to replace heavy PBR materials with cheaper ones in low quality mode.
 function convertCityMaterialsLowQuality(root) { // Define a function to downgrade city materials for performance.
@@ -619,6 +644,12 @@ function collidesWithObstacles(position, radius) { // Define a function to test 
         for (let i = 0; i < nearby.length; i++) { // Loop through each collision AABB in the candidate set.
             // Access the current world-space bounding box.
             const box = nearby[i]; // Get the current bounding box.
+            // Compute the size of this box to detect thin geometry.
+            const sizeVec = new THREE.Vector3(); // Create a vector to store the box size.
+            // Measure the extents of the box.
+            box.getSize(sizeVec); // Compute x, y, and z extents for the box.
+            // Skip collisions for very thin objects.
+            if (Math.min(sizeVec.x, sizeVec.y, sizeVec.z) < THIN_OBJECT_MIN_THICKNESS) { continue; } // Allow passing through thin obstacles.
             // Ignore boxes that lie entirely below the floor surface at this point.
             if (box.max.y <= floorY + 0.05) { // Skip ground-like surfaces to allow walking.
                 // Continue to the next box without testing.
@@ -653,10 +684,17 @@ function getGroundHeight(x, z) { // Define a function to sample the surface heig
         sharedRaycaster.far = 2000; // Allow the ray to travel a long distance downwards.
         // Intersect the ray with all collision meshes in the scene.
         const hits = sharedRaycaster.intersectObjects(collisionMeshes, true); // Collect all intersections along the ray.
-        // If any intersections were found, use the nearest hit.
-        if (hits.length > 0) { // Check if the ray hit a surface.
-            // Return the y coordinate of the closest hit point.
-            return hits[0].point.y; // Use the topmost surface directly under the x,z point.
+        // If any intersections were found, use the nearest non-thin hit.
+        if (hits.length > 0) { // Check if the ray hit any surface.
+            // Iterate through the intersections in nearest-first order.
+            for (let i = 0; i < hits.length; i++) { // Loop over each intersection.
+                // Get the intersection entry.
+                const h = hits[i]; // Access the hit data.
+                // Ignore hits on thin geometry to allow passing through.
+                if (isThinHitObject(h.object)) { continue; } // Skip thin surfaces for ground height.
+                // Return the y coordinate for the first solid surface.
+                return h.point.y; // Provide the ground height at this x,z.
+            }
         }
     }
     // Fallback: use the procedural obstacles to determine a surface.
