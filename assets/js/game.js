@@ -340,16 +340,18 @@ if (USE_GLTF_SCENE) { // Only load the GLTF when the feature flag is enabled.
         }
         // Create a vector to store the center of the bounding box.
         const center = bbox.getCenter(new THREE.Vector3()); // Find the center point for reference.
-        // Read the maximum y height of the model for safe spawning.
+        // Read the maximum y height of the model for reference (not used for spawn).
         const maxY = bbox.max.y; // Access the top of the city in world coordinates.
         // Adjust the player's spawn position if the game has not started.
         if (!gameStarted) { // Only adjust the spawn before gameplay begins.
             // Place the player near the center of the city horizontally.
             yawObject.position.x = center.x; // Align the player x to the model center.
-            // Place the player slightly above the top of the city for safety.
-            yawObject.position.y = maxY + groundLevel; // Offset y above the tallest point.
             // Place the player a few units forward to avoid clipping.
             yawObject.position.z = center.z + 5; // Offset z to be just in front of the center.
+            // Sample the ground height at the intended spawn x,z and rest the player on the surface.
+            const spawnSurfaceY = getGroundHeight(yawObject.position.x, yawObject.position.z); // Compute terrain height under the spawn.
+            // Place the player on the ground rather than in mid-air.
+            yawObject.position.y = spawnSurfaceY + groundLevel; // Align the camera to stand on the surface.
             // Log the chosen spawn position for visibility.
             console.log('Adjusted spawn near city:', yawObject.position); // Print the spawn position.
         }
