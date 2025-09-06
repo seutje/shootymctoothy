@@ -1,30 +1,367 @@
 // Create a new Three.js scene.
-const scene = new THREE.Scene();
+const scene = new THREE.Scene(); // Create a new Three.js scene instance.
 // Set a blue color as the fallback background.
 scene.background = new THREE.Color(0x87ceeb);
 // Create a texture loader for loading textures.
-const textureLoader = new THREE.TextureLoader();
+const textureLoader = new THREE.TextureLoader(); // Create a loader for basic textures.
 // Load the equirectangular sky texture.
-const skyTexture = textureLoader.load('assets/images/texture-sky.png');
+const skyTexture = textureLoader.load('assets/images/texture-sky.png'); // Load the sky texture from assets.
 // Set the texture mapping mode for reflections.
-skyTexture.mapping = THREE.EquirectangularReflectionMapping;
+skyTexture.mapping = THREE.EquirectangularReflectionMapping; // Enable equirectangular environment mapping.
 // Use the texture as the background of the scene.
-scene.background = skyTexture;
+scene.background = skyTexture; // Set the scene background to the loaded sky.
 // Use the same texture for environment reflections.
-scene.environment = skyTexture;
+// Note: enable reflections only in high quality mode to save performance.
+// Flag to enable higher quality rendering and effects.
+const HIGH_QUALITY = true; // Set to true for higher quality at the cost of performance.
+// Apply the environment texture only when high quality is enabled.
+if (HIGH_QUALITY) { scene.environment = skyTexture; } // Use the sky as the environment map for PBR materials.
+
+// Flag to indicate that we use the GLTF city scene for the level geometry.
+const USE_GLTF_SCENE = true; // Toggle to switch from procedural ground/obstacles to GLTF scene.
+// Scalar used to uniformly scale the loaded city model.
+const CITY_SCALE = 15; // Adjust this scale to make the city larger or smaller.
+// Vector used to offset the city model in world space.
+const CITY_OFFSET = new THREE.Vector3(0, 0, 0); // Adjust this offset to reposition the city.
+
+// Arrays used for collision detection against the loaded GLTF scene.
+const collisionMeshes = []; // Store all mesh objects from the GLTF for raycasting.
+const collisionBoxes = []; // Store world-space axis-aligned bounding boxes for broad-phase checks.
+// Shared raycaster to reduce allocations during frequent collision and height queries.
+const sharedRaycaster = new THREE.Raycaster(); // Create a reusable raycaster instance.
+// Temporary vectors reused to avoid per-frame garbage collection pressure.
+const tmpVec3A = new THREE.Vector3(); // Allocate a temporary vector for positions and directions.
+const tmpVec3B = new THREE.Vector3(); // Allocate another temporary vector for intermediate math.
+// Spatial grid cell size used to index collision boxes.
+const collisionGridCellSize = 10; // Define the size of each grid cell in world units.
+// Spatial hash map from cell key to a list of box indices.
+const collisionGrid = new Map(); // Create a map to store which boxes occupy which cells.
+
+// Helper to compute a grid cell index from a coordinate.
+function gridIndex(v) { // Define a function that converts a coordinate to a grid index.
+    // Divide by cell size and floor to get the integer index.
+    return Math.floor(v / collisionGridCellSize); // Return the integer cell index along one axis.
+}
+
+// Helper to build a string key for a grid cell.
+function gridKey(ix, iy, iz) { // Define a function that builds a key for the grid map.
+    // Concatenate the indices with commas for a unique key.
+    return ix + ',' + iy + ',' + iz; // Return the composite string key.
+}
+
+// Helper to add a world-space Box3 to the spatial grid.
+function addBoxToCollisionGrid(box, boxIndex) { // Define a function to index a box into the grid.
+    // Compute the min cell indices by converting the min corner to grid space.
+    const minIx = gridIndex(box.min.x); // Calculate the minimum x cell index.
+    const minIy = gridIndex(box.min.y); // Calculate the minimum y cell index.
+    const minIz = gridIndex(box.min.z); // Calculate the minimum z cell index.
+    // Compute the max cell indices by converting the max corner to grid space.
+    const maxIx = gridIndex(box.max.x); // Calculate the maximum x cell index.
+    const maxIy = gridIndex(box.max.y); // Calculate the maximum y cell index.
+    const maxIz = gridIndex(box.max.z); // Calculate the maximum z cell index.
+    // Loop over all cells touched by this box.
+    for (let ix = minIx; ix <= maxIx; ix++) { // Iterate over x axis cells.
+        for (let iy = minIy; iy <= maxIy; iy++) { // Iterate over y axis cells.
+            for (let iz = minIz; iz <= maxIz; iz++) { // Iterate over z axis cells.
+                // Build the grid cell key string.
+                const key = gridKey(ix, iy, iz); // Construct the cell key.
+                // Retrieve the existing list or create a new one.
+                let list = collisionGrid.get(key); // Look up the array of indices for this cell.
+                // Initialize the list when missing.
+                if (!list) { list = []; collisionGrid.set(key, list); } // Create the array and store it into the map.
+                // Add this box index to the list for this cell.
+                list.push(boxIndex); // Record that this cell contains this box.
+            }
+        }
+    }
+} // End of addBoxToCollisionGrid helper.
+
+// Helper to query nearby boxes for a sphere via the spatial grid.
+function queryBoxesNearSphere(position, radius) { // Define a function to find candidate boxes near a sphere.
+    // Compute the min and max corners of the sphere's AABB.
+    const minX = position.x - radius; // Calculate the minimum x bound.
+    const minY = position.y - radius; // Calculate the minimum y bound.
+    const minZ = position.z - radius; // Calculate the minimum z bound.
+    const maxX = position.x + radius; // Calculate the maximum x bound.
+    const maxY = position.y + radius; // Calculate the maximum y bound.
+    const maxZ = position.z + radius; // Calculate the maximum z bound.
+    // Convert the AABB corners to grid indices.
+    const minIx = gridIndex(minX); // Convert the minimum x to a grid index.
+    const minIy = gridIndex(minY); // Convert the minimum y to a grid index.
+    const minIz = gridIndex(minZ); // Convert the minimum z to a grid index.
+    const maxIx = gridIndex(maxX); // Convert the maximum x to a grid index.
+    const maxIy = gridIndex(maxY); // Convert the maximum y to a grid index.
+    const maxIz = gridIndex(maxZ); // Convert the maximum z to a grid index.
+    // Use a set to deduplicate box indices gathered from multiple cells.
+    const candidate = new Set(); // Create a set to hold unique box indices.
+    // Loop over overlapped cells to collect box indices.
+    for (let ix = minIx; ix <= maxIx; ix++) { // Iterate over x axis cells.
+        for (let iy = minIy; iy <= maxIy; iy++) { // Iterate over y axis cells.
+            for (let iz = minIz; iz <= maxIz; iz++) { // Iterate over z axis cells.
+                // Build the key for this cell.
+                const key = gridKey(ix, iy, iz); // Construct the cell key string.
+                // Look up any boxes registered to this cell.
+                const list = collisionGrid.get(key); // Retrieve the array of indices for this cell.
+                // Add each box index from this cell to the candidate set.
+                if (list) { list.forEach(idx => candidate.add(idx)); } // Insert indices if present.
+            }
+        }
+    }
+    // Convert the set of indices into an array of boxes.
+    return Array.from(candidate).map(idx => collisionBoxes[idx]); // Map indices back to Box3 objects.
+} // End of queryBoxesNearSphere helper.
+
+// Helper to build collider data from a loaded GLTF scene node.
+function buildCollidersFromModel(root) { // Define a function that extracts colliders from the GLTF scene.
+    // Update world matrices to ensure bounding boxes are accurate.
+    root.updateMatrixWorld(true); // Force world matrices to update for all descendants.
+    // Traverse each child of the root scene.
+    root.traverse((obj) => { // Walk through the node hierarchy.
+        // Only process mesh objects for collision.
+        if (obj.isMesh) { // Check if this object is a mesh.
+            // Enable shadow casting and receiving to integrate with lighting.
+            obj.castShadow = true; // Allow this mesh to cast shadows.
+            obj.receiveShadow = true; // Allow this mesh to receive shadows.
+            // Freeze transforms for static geometry to skip per-frame matrix updates.
+            obj.matrixAutoUpdate = false; // Disable automatic world matrix updates for static meshes.
+            // Add the mesh to the list used for raycasting.
+            collisionMeshes.push(obj); // Store the mesh for precise ray intersections.
+            // Ensure the geometry has a bounding box.
+            if (!obj.geometry.boundingBox) { // Check if the geometry lacks a bounding box.
+                obj.geometry.computeBoundingBox(); // Compute the geometry's local-space bounding box.
+            }
+            // Clone the local bounding box to transform it to world space.
+            const worldBox = obj.geometry.boundingBox.clone(); // Clone the local bounding box.
+            // Apply the world matrix to move the box into world coordinates.
+            worldBox.applyMatrix4(obj.matrixWorld); // Transform the bounding box into world space.
+            // Store the transformed world-space bounding box.
+            collisionBoxes.push(worldBox); // Save the world-space box for simple collision checks.
+            // Index this box into the spatial grid for fast queries.
+            addBoxToCollisionGrid(worldBox, collisionBoxes.length - 1); // Register the box into the grid structure.
+        }
+    });
+} // End of buildCollidersFromModel helper.
+
+// Helper to replace heavy PBR materials with cheaper ones in low quality mode.
+function convertCityMaterialsLowQuality(root) { // Define a function to downgrade city materials for performance.
+    // Traverse the scene graph to find mesh materials.
+    root.traverse((obj) => { // Visit every descendant of the root node.
+        // Only process mesh objects that have a material.
+        if (obj.isMesh && obj.material) { // Ensure the object is a mesh with a material.
+            // Normalize to an array to handle multi-material meshes.
+            const materials = Array.isArray(obj.material) ? obj.material : [obj.material]; // Create an array of materials.
+            // Build a list of replacement materials.
+            const replaced = materials.map((mat) => { // Map each original material to a new one.
+                // Create a cheaper lambert material to replace PBR shading.
+                const m = new THREE.MeshLambertMaterial(); // Allocate a lambert material which is faster to render.
+                // Copy the color property if defined.
+                if (mat.color) { m.color.copy(mat.color); } // Preserve base color when present.
+                // Copy the base color texture if present.
+                if (mat.map) { m.map = mat.map; } // Preserve the diffuse texture map when available.
+                // Lower anisotropy to reduce texture sampling cost.
+                if (m.map && m.map.anisotropy !== undefined) { m.map.anisotropy = 1; } // Force minimal anisotropy for performance.
+                // Copy transparency flags so alpha surfaces still work.
+                m.transparent = !!mat.transparent; // Keep transparency behavior of the original material.
+                // Copy opacity value if set.
+                if (typeof mat.opacity === 'number') { m.opacity = mat.opacity; } // Preserve opacity when provided.
+                // Copy double sided flag if used by the original.
+                if (mat.side !== undefined) { m.side = mat.side; } // Preserve face culling mode.
+                // Return the replacement material.
+                return m; // Provide the new, cheaper material to use.
+            });
+            // Apply the correct material type back to the mesh.
+            obj.material = Array.isArray(obj.material) ? replaced : replaced[0]; // Assign either array or single material.
+        }
+    });
+} // End of convertCityMaterialsLowQuality helper.
+
+// Helper to merge static meshes by material to reduce draw calls.
+function mergeCityMeshesByMaterial(root) { // Define a function to merge meshes that share the same material.
+    // Ensure world matrices are current before extracting geometry.
+    root.updateMatrixWorld(true); // Update world transforms for accurate merging.
+    // Create a map from material UUID to an array of world-space geometries to merge.
+    const groups = new Map(); // Initialize a map to group geometries by material.
+    // Create an array to track original meshes to remove after merging.
+    const toRemove = []; // Keep a list of meshes scheduled for removal.
+    // Traverse the node hierarchy to collect meshes.
+    root.traverse((obj) => { // Visit every descendant under the root.
+        // Process only standard meshes with a geometry and material.
+        if (obj.isMesh && obj.geometry && obj.material) { // Check object type and data presence.
+            // Normalize to an array to handle multi-material meshes.
+            const materials = Array.isArray(obj.material) ? obj.material : [obj.material]; // Ensure we can iterate materials.
+            // Skip meshes with multiple materials to avoid index buffer complexity.
+            if (materials.length !== 1) { return; } // Abort for multi-material meshes to keep merging simple.
+            // Retrieve the single material used by this mesh.
+            const material = materials[0]; // Access the mesh material.
+            // Compute a unique key for this material instance.
+            const key = material.uuid; // Use the UUID to group identical materials.
+            // Clone the geometry so we can bake the world transform into it.
+            const geom = obj.geometry.clone(); // Duplicate the buffer geometry for transformation.
+            // Apply the mesh's world transform to the cloned geometry.
+            geom.applyMatrix4(obj.matrixWorld); // Bake the world transform into the geometry.
+            // Retrieve or create the array for this material group.
+            const arr = groups.get(key) || []; // Get the list of geometries for this material.
+            // Append the transformed geometry to the group array.
+            arr.push(geom); // Collect the geometry for merging.
+            // Store back the array to the map in case it was newly created.
+            groups.set(key, arr); // Update the group map with the new list.
+            // Track this mesh so we can remove it after merging.
+            toRemove.push(obj); // Schedule the original mesh for removal.
+        }
+    });
+    // Remove all original meshes that have been scheduled for merging.
+    toRemove.forEach(m => { if (m.parent) { m.parent.remove(m); } }); // Detach merged meshes from the scene graph.
+    // If there are no groups, exit early.
+    if (groups.size === 0) { return; } // Nothing to merge when no groups were collected.
+    // Iterate over each material group to create merged meshes.
+    groups.forEach((geometries, key) => { // Loop over all grouped geometries.
+        // Merge the geometries using the utility function.
+        const merged = THREE.BufferGeometryUtils.mergeBufferGeometries(geometries, false); // Merge into a single geometry.
+        // Find a representative material to reuse.
+        let materialRef = null; // Initialize the material reference.
+        // Attempt to find a material from any removed mesh that matches the UUID.
+        for (let i = 0; i < toRemove.length; i++) { // Iterate over removed meshes.
+            // Check if this mesh's material has the same UUID as the group key.
+            const mat = Array.isArray(toRemove[i].material) ? toRemove[i].material[0] : toRemove[i].material; // Access the mesh material.
+            // Compare UUIDs to find a match.
+            if (mat && mat.uuid === key) { materialRef = mat; break; } // Select this material as the representative.
+        }
+        // Fallback to a basic lambert material when no reference was found.
+        if (!materialRef) { materialRef = new THREE.MeshLambertMaterial({ color: 0x808080 }); } // Provide a default material.
+        // Create a new mesh with the merged geometry and selected material.
+        const mergedMesh = new THREE.Mesh(merged, materialRef); // Instantiate the merged mesh.
+        // Freeze transforms as the geometry is already in world space.
+        mergedMesh.matrixAutoUpdate = false; // Disable automatic transform updates.
+        // Add the merged mesh directly to the scene so world-space geometry renders correctly.
+        scene.add(mergedMesh); // Insert the merged mesh into the scene.
+    });
+} // End of mergeCityMeshesByMaterial helper.
+
+// Load the GLTF city scene and add it to the world.
+if (USE_GLTF_SCENE) { // Only load the GLTF when the feature flag is enabled.
+    // Create a new GLTFLoader using the global THREE namespace.
+    const gltfLoader = new THREE.GLTFLoader(); // Instantiate the loader provided by the examples script.
+    // Set the base path for related model resources as recommended by the docs.
+    gltfLoader.setPath('assets/models/city/'); // Ensure relative resource URIs resolve correctly.
+    // Begin loading the city model from the configured base path with progress and error callbacks.
+    gltfLoader.load('scene.gltf', (gltf) => { // Load the GLTF scene asynchronously.
+        // Access the root scene object from the GLTF result.
+        const city = gltf.scene; // Grab the scene graph contained in the model.
+        // Apply a uniform scale to the city using the configured constant.
+        city.scale.setScalar(CITY_SCALE); // Scale the city uniformly on all axes.
+        // Apply a world-space offset to position the city where desired.
+        city.position.copy(CITY_OFFSET); // Move the city to the configured offset.
+        // Add the city scene to the main Three.js scene.
+        scene.add(city); // Insert the loaded city into the active scene.
+        // Update matrices before computing bounds.
+        city.updateMatrixWorld(true); // Ensure transforms are current for accurate bounds.
+        // Compute a bounding box for the model to align it with the ground plane.
+        const bboxAlign = new THREE.Box3().setFromObject(city); // Calculate bounds for alignment purposes.
+        // Compute how far the bottom of the model is from y = 0.
+        const bottomOffset = -bboxAlign.min.y; // Determine the delta needed to place the bottom at y = 0.
+        // Shift the city so its bottom sits exactly on the ground plane level.
+        city.position.y += bottomOffset; // Apply the vertical offset to align with the ground plane.
+        // Update matrices after changing the position.
+        city.updateMatrixWorld(true); // Recompute matrices to reflect the new alignment.
+        // Replace heavy materials with cheaper ones when not in high quality mode.
+        if (!HIGH_QUALITY) { convertCityMaterialsLowQuality(city); } // Downgrade city materials for better performance.
+        // Build collision data by traversing the aligned scene.
+        buildCollidersFromModel(city); // Extract meshes and bounding boxes for collision queries.
+        // Compute a bounding box to position the player safely relative to the city.
+        const bbox = new THREE.Box3().setFromObject(city); // Calculate the world-space bounds of the aligned city.
+        // Calculate the width of a single city tile along the x axis.
+        const tileWidth = bbox.max.x - bbox.min.x; // Compute the tile size horizontally.
+        // Calculate the depth of a single city tile along the z axis.
+        const tileDepth = bbox.max.z - bbox.min.z; // Compute the tile size in depth.
+        // Determine how many tiles are needed to cover the play area on x.
+        const tilesX = Math.ceil((worldWidth / 2) / Math.max(1, tileWidth)); // Compute tile count to the positive side on x.
+        // Determine how many tiles are needed to cover the play area on z.
+        const tilesZ = Math.ceil((worldDepth / 2) / Math.max(1, tileDepth)); // Compute tile count to the positive side on z.
+        // Loop over the grid positions to place city clones.
+        for (let ix = -tilesX; ix <= tilesX; ix++) { // Iterate across the x tiles from negative to positive.
+            // Iterate across the z tiles for each x tile.
+            for (let iz = -tilesZ; iz <= tilesZ; iz++) { // Iterate across the z tiles from negative to positive.
+                // Skip the origin tile where the original city is already placed.
+                if (ix === 0 && iz === 0) { // Check if this tile is the original location.
+                    // Continue to the next tile without cloning.
+                    continue; // Avoid creating a duplicate at the origin.
+                }
+                // Create a deep clone of the city scene graph for this tile.
+                const clone = city.clone(true); // Clone the entire city hierarchy including materials.
+                // Set the clone position based on the tile indices.
+                clone.position.set(city.position.x + ix * tileWidth, city.position.y, city.position.z + iz * tileDepth); // Offset the clone by tile size.
+                // Add the clone to the scene graph.
+                scene.add(clone); // Insert the cloned city tile into the scene.
+                // Update matrices so bounds and colliders are correct.
+                clone.updateMatrixWorld(true); // Ensure the clone's transforms are up to date.
+                // Do not re-convert materials for clones to avoid duplicating textures/materials.
+                // Build collision data for this clone as well.
+                buildCollidersFromModel(clone); // Extract colliders from the cloned tile.
+            }
+        }
+        // Create a vector to store the center of the bounding box.
+        const center = bbox.getCenter(new THREE.Vector3()); // Find the center point for reference.
+        // Read the maximum y height of the model for safe spawning.
+        const maxY = bbox.max.y; // Access the top of the city in world coordinates.
+        // Adjust the player's spawn position if the game has not started.
+        if (!gameStarted) { // Only adjust the spawn before gameplay begins.
+            // Place the player near the center of the city horizontally.
+            yawObject.position.x = center.x; // Align the player x to the model center.
+            // Place the player slightly above the top of the city for safety.
+            yawObject.position.y = maxY + groundLevel; // Offset y above the tallest point.
+            // Place the player a few units forward to avoid clipping.
+            yawObject.position.z = center.z + 5; // Offset z to be just in front of the center.
+            // Log the chosen spawn position for visibility.
+            console.log('Adjusted spawn near city:', yawObject.position); // Print the spawn position.
+        }
+    }, (event) => { // Define a progress callback.
+        // Compute the percentage of the model that has loaded, if known.
+        const percent = event.total ? (event.loaded / event.total * 100).toFixed(0) : '...'; // Compute percent loaded.
+        // Log loading progress for debugging.
+        console.log(`Loading city model: ${percent}%`); // Print progress to the console.
+    }, (error) => { // Define an error callback to catch loading issues.
+        // Log the error so problems can be diagnosed.
+        console.error('Failed to load city model:', error); // Print the error object to the console.
+    });
+} // End of GLTF scene loading block.
 
 // Create a new perspective camera.
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000); // Create a perspective camera.
 // Attach the audio listener to the camera.
-attachAudioListener(camera);
-// Create a new WebGL renderer.
-const renderer = new THREE.WebGLRenderer();
+attachAudioListener(camera); // Hook the audio system to the active camera.
+// Create a canvas element that will host the WebGL context.
+const canvas = document.createElement('canvas'); // Allocate a canvas for the renderer.
+// Try to acquire a WebGL2 context with a high-performance preference.
+let gl = canvas.getContext('webgl2', { powerPreference: 'high-performance', antialias: HIGH_QUALITY, alpha: false, depth: true, stencil: false, desynchronized: true, failIfMajorPerformanceCaveat: true }); // Request a high-performance WebGL2 context.
+// Fallback to a more permissive WebGL2 context if the first attempt fails.
+if (!gl) { gl = canvas.getContext('webgl2', { powerPreference: 'high-performance', antialias: HIGH_QUALITY, alpha: false, depth: true, stencil: false, desynchronized: true, failIfMajorPerformanceCaveat: false }); } // Retry without the strict caveat flag.
+// Fallback to WebGL1 if WebGL2 is not available.
+if (!gl) { gl = canvas.getContext('webgl', { powerPreference: 'high-performance', antialias: HIGH_QUALITY, alpha: false, depth: true, stencil: false, desynchronized: true }); } // Retry with a WebGL1 context.
+// Create a Three.js renderer from the acquired context.
+const renderer = new THREE.WebGLRenderer({ canvas: canvas, context: gl }); // Initialize the renderer using the explicit WebGL context.
 // Set the size of the renderer to the window size.
-renderer.setSize(window.innerWidth, window.innerHeight);
-// Enable shadows in the renderer.
-renderer.shadowMap.enabled = true;
+renderer.setSize(window.innerWidth, window.innerHeight); // Match the renderer size to the browser window.
+// Set the pixel ratio to reduce fill-rate on high DPI screens.
+renderer.setPixelRatio(HIGH_QUALITY ? Math.min(2, window.devicePixelRatio) : Math.min(1.25, window.devicePixelRatio)); // Cap device pixel ratio for performance.
+// Use sRGB output encoding so glTF colors look correct as per docs.
+renderer.outputEncoding = THREE.sRGBEncoding; // Enable sRGB encoding recommended for glTF rendering.
+// Enable the shadow system only when running in high quality mode.
+renderer.shadowMap.enabled = HIGH_QUALITY; // Toggle shadow rendering based on the quality mode.
+// Select an appropriate shadow filter when enabled.
+if (HIGH_QUALITY) { renderer.shadowMap.type = THREE.PCFSoftShadowMap; } // Use soft shadows for better visuals.
 // Append the renderer to the document body.
-document.body.appendChild(renderer.domElement);
+document.body.appendChild(renderer.domElement); // Insert the renderer's canvas into the DOM.
+// Log renderer and GPU information to verify hardware acceleration.
+(function logRendererInfo() { // Define an IIFE to print GPU diagnostics.
+    // Print whether WebGL2 is active.
+    console.log('WebGL2 active:', renderer.capabilities.isWebGL2); // Report the WebGL version in use.
+    // Attempt to query unmasked renderer and vendor strings when available.
+    const dbg = gl.getExtension('WEBGL_debug_renderer_info'); // Request the debug renderer info extension.
+    // Log the vendor and renderer details if the extension is present.
+    if (dbg) { console.log('GPU Vendor:', gl.getParameter(dbg.UNMASKED_VENDOR_WEBGL)); console.log('GPU Renderer:', gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL)); } // Print GPU vendor and renderer names.
+    // Log draw call and triangle counters to aid performance profiling.
+    console.log('Renderer caps:', renderer.capabilities); // Output general renderer capabilities.
+})(); // Execute the logging function immediately.
 
 // Create a white ambient light with an intensity of 0.6.
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
@@ -36,41 +373,43 @@ const sunLight = new THREE.PointLight(0xffffff, 1, 1000);
 // Position the sun light.
 sunLight.position.set(110, 125, -500);
 // Allow the sun light to cast shadows.
-sunLight.castShadow = true;
+sunLight.castShadow = HIGH_QUALITY; // Enable light shadows only in high quality mode.
+// Configure the shadow map size when shadows are enabled.
+if (HIGH_QUALITY) { sunLight.shadow.mapSize.set(1024, 1024); } // Increase resolution for cleaner shadows.
 // Add the sun light to the scene.
 scene.add(sunLight);
 
-// Create a plane geometry for the ground.
-const groundGeometry = new THREE.PlaneGeometry(500, 500);
+// Create a plane geometry for the fallback ground.
+const groundGeometry = new THREE.PlaneGeometry(500, 500); // Define a large plane for a simple ground.
 // Create a texture object to hold the ground image.
-const groundTexture = new THREE.Texture();
+const groundTexture = new THREE.Texture(); // Allocate a texture object for the fallback ground.
 // Create an image element for the ground texture.
-const groundImage = new Image();
+const groundImage = new Image(); // Create an image to load the ground texture file.
 // Update the texture settings once the image loads.
-groundImage.onload = function () {
+groundImage.onload = function () { // Define the onload handler for the ground texture.
     // Assign the loaded image to the texture.
-    groundTexture.image = groundImage;
+    groundTexture.image = groundImage; // Set the texture image after it loads.
     // Inform Three.js that the texture needs an update.
-    groundTexture.needsUpdate = true;
+    groundTexture.needsUpdate = true; // Flag the texture for upload to the GPU.
     // Set the texture to repeat horizontally.
-    groundTexture.wrapS = THREE.RepeatWrapping;
+    groundTexture.wrapS = THREE.RepeatWrapping; // Configure wrapping for the S axis.
     // Set the texture to repeat vertically.
-    groundTexture.wrapT = THREE.RepeatWrapping;
+    groundTexture.wrapT = THREE.RepeatWrapping; // Configure wrapping for the T axis.
     // Set how many times the texture repeats.
-    groundTexture.repeat.set(50, 50);
-};
+    groundTexture.repeat.set(50, 50); // Repeat the texture many times for tiling.
+}; // End of onload handler for the ground texture.
 // Start loading the ground texture from the assets folder.
-groundImage.src = 'assets/images/texture-ground.png';
+groundImage.src = 'assets/images/texture-ground.png'; // Begin loading the fallback ground texture.
 // Create a material for the ground using the texture.
-const groundMaterial = new THREE.MeshStandardMaterial({ map: groundTexture });
+const groundMaterial = new THREE.MeshStandardMaterial({ map: groundTexture }); // Build a standard material for the ground.
 // Create a mesh from the ground geometry and material.
-const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+const ground = new THREE.Mesh(groundGeometry, groundMaterial); // Create the fallback ground mesh.
 // Rotate the ground to be horizontal.
-ground.rotation.x = -Math.PI / 2;
+ground.rotation.x = -Math.PI / 2; // Rotate the plane to lie flat.
 // Allow the ground to receive shadows.
-ground.receiveShadow = true;
-// Add the ground to the scene.
-scene.add(ground);
+ground.receiveShadow = true; // Enable shadow reception on the ground.
+// Add the ground to the scene unless we will use the GLTF.
+scene.add(ground); // Add the ground so the game can run before the GLTF loads.
 
 // Create a yaw object to control horizontal rotation.
 const yawObject = new THREE.Object3D();
@@ -154,15 +493,15 @@ lightningGroup.visible = false;
 camera.add(lightningGroup);
 
 // Store the world width for obstacle placement calculations.
-const worldWidth = 500;
+const worldWidth = 500; // Define the approximate world width for bounds.
 // Store the world depth for obstacle placement calculations.
-const worldDepth = 500;
+const worldDepth = 500; // Define the approximate world depth for bounds.
 // Define the size of each obstacle for coverage checks.
-const obstacleSize = 5;
+const obstacleSize = 5; // Size used only for procedural obstacles (unused with GLTF).
 // Define the maximum fraction of the world that obstacles may occupy.
-const maxObstacleCoverage = 0.4;
+const maxObstacleCoverage = 0.4; // Max density for procedural obstacles (unused with GLTF).
 // Set the initial number of obstacles to spawn.
-const initialObstacleCount = 100;
+const initialObstacleCount = 100; // Default obstacle count when using procedural world.
 
 // Create a texture object that will hold the obstacle texture.
 const obstacleTexture = new THREE.Texture();
@@ -201,6 +540,10 @@ function createObstacle(x, z) {
 }
 // Function to spawn multiple obstacles at random positions.
 function spawnRandomObstacles(desiredCount) {
+    // Early exit when using the GLTF scene instead of procedural obstacles.
+    if (USE_GLTF_SCENE) { // Check if the game is configured to use the GLTF scene.
+        return; // Skip creating procedural obstacles when the GLTF scene is active.
+    }
     // Calculate the total area of the world.
     const worldArea = worldWidth * worldDepth;
     // Calculate the area of a single obstacle.
@@ -232,95 +575,145 @@ function spawnRandomObstacles(desiredCount) {
 }
 
 // Spawn one hundred obstacles at random positions.
-spawnRandomObstacles(initialObstacleCount);
+spawnRandomObstacles(initialObstacleCount); // Attempt to spawn obstacles unless disabled by the GLTF flag.
 
 // Function to check if a position collides with obstacles.
-function collidesWithObstacles(position, radius) {
-    // Iterate over every obstacle.
-    for (let i = 0; i < obstacles.length; i++) {
+function collidesWithObstacles(position, radius) { // Define a function to test sphere collisions against the world.
+    // First, check against any existing procedural obstacles.
+    for (let i = 0; i < obstacles.length; i++) { // Iterate over legacy obstacle cubes.
         // Get the current obstacle.
-        const obstacle = obstacles[i];
+        const obstacle = obstacles[i]; // Access the current obstacle mesh.
         // Define half size of the obstacle for bounds checking.
-        const halfSize = 2.5; // Define half size of the obstacle for bounds checking.
+        const halfSize = 2.5; // Half size of the 5x5x5 cube.
         // Calculate the absolute x distance from the obstacle center.
-        const dx = Math.abs(position.x - obstacle.position.x);
+        const dx = Math.abs(position.x - obstacle.position.x); // Horizontal distance on x.
         // Calculate the absolute z distance from the obstacle center.
-        const dz = Math.abs(position.z - obstacle.position.z);
+        const dz = Math.abs(position.z - obstacle.position.z); // Horizontal distance on z.
         // Check for horizontal overlap before checking vertical position.
-        if (dx < halfSize + radius && dz < halfSize + radius) {
+        if (dx < halfSize + radius && dz < halfSize + radius) { // Broad-phase overlap test on xz plane.
             // Calculate the bottom of the player sphere.
-            const playerBottom = position.y - radius;
+            const playerBottom = position.y - radius; // Compute the y of the sphere bottom.
             // Calculate the top of the obstacle cube.
-            const obstacleTop = obstacle.position.y + halfSize;
+            const obstacleTop = obstacle.position.y + halfSize; // Compute the obstacle top y.
             // Allow overlap when the player is above the obstacle.
-            if (playerBottom >= obstacleTop) {
+            if (playerBottom >= obstacleTop) { // Allow standing above without blocking.
                 // Skip this obstacle because the player is standing on top.
-                continue;
+                continue; // Continue to next obstacle without reporting a collision.
             }
             // Calculate the bottom of the obstacle cube.
-            const obstacleBottom = obstacle.position.y - halfSize;
+            const obstacleBottom = obstacle.position.y - halfSize; // Compute the obstacle bottom y.
             // Check if the player is inside the vertical bounds.
-            if (playerBottom < obstacleTop && position.y + radius > obstacleBottom) {
+            if (playerBottom < obstacleTop && position.y + radius > obstacleBottom) { // Full overlap test including y.
                 // Return true because a collision occurs.
-                return true;
+                return true; // Report collision against the procedural obstacle.
+            }
+        }
+    }
+    // If we have model-based collision boxes, test against them as well.
+    if (collisionBoxes.length > 0) { // Only run when GLTF collision data exists.
+        // Calculate the local ground height at this x,z to ignore the floor.
+        const floorY = getGroundHeight(position.x, position.z); // Sample the surface height under the sphere.
+        // Query only nearby boxes using the spatial grid when available.
+        const nearby = collisionGrid.size > 0 ? queryBoxesNearSphere(position, radius + collisionGridCellSize) : collisionBoxes; // Select candidate boxes.
+        // Iterate over each candidate world-space bounding box.
+        for (let i = 0; i < nearby.length; i++) { // Loop through each collision AABB in the candidate set.
+            // Access the current world-space bounding box.
+            const box = nearby[i]; // Get the current bounding box.
+            // Ignore boxes that lie entirely below the floor surface at this point.
+            if (box.max.y <= floorY + 0.05) { // Skip ground-like surfaces to allow walking.
+                // Continue to the next box without testing.
+                continue; // Skip low boxes to avoid blocking by the floor.
+            }
+            // Compute the distance from the box to the sphere center.
+            const distance = box.distanceToPoint(position); // Measure point-to-box distance in world space.
+            // If the distance is smaller than the radius, there is an overlap.
+            if (distance < radius) { // Check for a penetrating overlap.
+                // Report a collision when the sphere intersects the box volume.
+                return true; // Indicate that movement should be blocked.
             }
         }
     }
     // Return false if no collisions were detected.
-    return false;
-}
+    return false; // No collision found against obstacles or model boxes.
+} // End of collidesWithObstacles.
 
 // Function to get the ground height at a specific x and z position.
-function getGroundHeight(x, z) {
-    // Start with the base ground height of zero.
-    let height = 0;
+function getGroundHeight(x, z) { // Define a function to sample the surface height beneath a point.
+    // If we have a detailed scene, use raycasting to find the top surface.
+    if (collisionMeshes.length > 0) { // Check if GLTF meshes are available for ray tests.
+        // Create a ray origin far above the possible scene height.
+        tmpVec3A.set(x, 1000, z); // Place the ray high above the target x,z using the shared vector.
+        // Define a downward pointing direction vector.
+        tmpVec3B.set(0, -1, 0); // Use the shared vector pointing down along y.
+        // Configure the shared raycaster for a downward ray.
+        sharedRaycaster.set(tmpVec3A, tmpVec3B); // Set origin and direction on the shared raycaster.
+        // Set the near plane for the ray.
+        sharedRaycaster.near = 0; // Start detecting intersections immediately from the origin.
+        // Set the far plane to a large value to reach the ground.
+        sharedRaycaster.far = 2000; // Allow the ray to travel a long distance downwards.
+        // Intersect the ray with all collision meshes in the scene.
+        const hits = sharedRaycaster.intersectObjects(collisionMeshes, true); // Collect all intersections along the ray.
+        // If any intersections were found, use the nearest hit.
+        if (hits.length > 0) { // Check if the ray hit a surface.
+            // Return the y coordinate of the closest hit point.
+            return hits[0].point.y; // Use the topmost surface directly under the x,z point.
+        }
+    }
+    // Fallback: use the procedural obstacles to determine a surface.
+    let height = 0; // Initialize the fallback height to the base ground level.
     // Loop over each obstacle in the array.
-    for (let i = 0; i < obstacles.length; i++) {
+    for (let i = 0; i < obstacles.length; i++) { // Check each legacy obstacle cube.
         // Get the current obstacle from the array.
-        const obstacle = obstacles[i];
+        const obstacle = obstacles[i]; // Access the obstacle being tested.
         // Define half the obstacle size for bounds checking.
-        const halfSize = 2.5;
+        const halfSize = 2.5; // Half the cubic obstacle dimension.
         // Calculate the absolute x distance to the obstacle center.
-        const dx = Math.abs(x - obstacle.position.x);
+        const dx = Math.abs(x - obstacle.position.x); // Compute x offset to the obstacle.
         // Calculate the absolute z distance to the obstacle center.
-        const dz = Math.abs(z - obstacle.position.z);
+        const dz = Math.abs(z - obstacle.position.z); // Compute z offset to the obstacle.
         // Check if the position is within the obstacle bounds.
-        if (dx < halfSize && dz < halfSize) {
+        if (dx < halfSize && dz < halfSize) { // Check if x,z lies within the cube footprint.
             // Determine the top height of this obstacle.
-            const top = obstacle.position.y + halfSize;
+            const top = obstacle.position.y + halfSize; // Calculate the obstacle's top face y.
             // Keep the highest obstacle top found so far.
-            if (top > height) {
+            if (top > height) { // Compare against the current best height.
                 // Store the top height for later comparison.
-                height = top;
+                height = top; // Update the surface height estimate.
             }
         }
     }
     // Return the highest obstacle top or zero if none.
-    return height;
-}
+    return height; // Provide a surface height even without GLTF meshes.
+} // End of getGroundHeight.
 
 // Function to check if there is a clear path between two points.
-function hasLineOfSight(start, end) {
+function hasLineOfSight(start, end) { // Define a function to test clear path between two points.
     // Create a vector from start to end.
-    const direction = new THREE.Vector3();
+    const direction = new THREE.Vector3(); // Allocate a direction vector.
     // Subtract the start position from the end position.
-    direction.subVectors(end, start);
+    direction.subVectors(end, start); // Compute the vector from start to end.
     // Store the distance between the two points.
-    const distance = direction.length();
+    const distance = direction.length(); // Measure the straight-line distance.
     // Normalize the direction for ray casting.
-    direction.normalize();
+    direction.normalize(); // Convert the direction to a unit vector.
     // Create a raycaster from the start toward the end point.
-    const raycaster = new THREE.Raycaster(start.clone(), direction, 0, distance);
-    // Collect intersections with all obstacle meshes.
-    const intersections = raycaster.intersectObjects(obstacles, false);
+    sharedRaycaster.set(start.clone(), direction); // Configure the shared raycaster with the start and direction.
+    // Set the near plane for the ray.
+    sharedRaycaster.near = 0; // Begin intersection testing from the origin point.
+    // Set the far plane to the distance between the points.
+    sharedRaycaster.far = distance; // Limit the ray to the segment between start and end.
+    // Collect intersections with either GLTF meshes or legacy obstacles.
+    const targets = collisionMeshes.length > 0 ? collisionMeshes : obstacles; // Choose the correct target set.
+    // Perform intersection tests against the chosen target meshes.
+    const intersections = sharedRaycaster.intersectObjects(targets, true); // Compute ray hits along the path.
     // Check if the ray hit any obstacle before reaching the end.
-    if (intersections.length > 0) {
+    if (intersections.length > 0) { // Determine if something blocks the line between the points.
         // Return false if an obstacle blocks the line of sight.
-        return false;
+        return false; // Report that the path is obstructed.
     }
     // Return true when no obstacles are in the path.
-    return true;
-}
+    return true; // Indicate a clear line of sight between the two points.
+} // End of hasLineOfSight.
 
 // Create an array to store enemy objects.
 const enemies = [];
@@ -511,6 +904,46 @@ const groundLevel = 2;
 // Track whether the player is currently on the ground.
 let isGrounded = true;
 
+// Cache parameters for player ground sampling to reduce raycasts.
+const PLAYER_GROUND_CACHE_MS = 60; // Define how long to reuse a cached ground height in milliseconds.
+// Store the last time the ground height was computed.
+let playerGroundCacheTime = 0; // Track the timestamp of the last ground height update.
+// Store the last sampled x position for ground height.
+let playerGroundCacheX = 0; // Keep the x coordinate used for the last ground height raycast.
+// Store the last sampled z position for ground height.
+let playerGroundCacheZ = 0; // Keep the z coordinate used for the last ground height raycast.
+// Store the last computed ground height value.
+let playerGroundCacheY = 0; // Cache the resulting ground height under the player.
+// Helper to get the player's ground height with caching.
+function getPlayerSurfaceY() { // Define a function that returns the cached or freshly computed ground height.
+    // Read the current time for cache invalidation checks.
+    const now = performance.now(); // Capture the high-resolution time stamp.
+    // Check if the cache is still valid and the player has not moved far.
+    const moved = Math.abs(yawObject.position.x - playerGroundCacheX) + Math.abs(yawObject.position.z - playerGroundCacheZ); // Compute manhattan movement since last sample.
+    // Recompute when cache expired or movement exceeded a small threshold.
+    if (now - playerGroundCacheTime > PLAYER_GROUND_CACHE_MS || moved > 0.5) { // Decide whether to update the cache.
+        // Compute a fresh ground height using the generic function.
+        playerGroundCacheY = getGroundHeight(yawObject.position.x, yawObject.position.z); // Update the cached ground height.
+        // Record the time of this update.
+        playerGroundCacheTime = now; // Update the timestamp for the cache.
+        // Record the position used for this sample.
+        playerGroundCacheX = yawObject.position.x; // Store the x coordinate sampled.
+        playerGroundCacheZ = yawObject.position.z; // Store the z coordinate sampled.
+    }
+    // Return the cached or updated ground height value.
+    return playerGroundCacheY; // Provide the surface height beneath the player.
+} // End of getPlayerSurfaceY helper.
+
+// Step size used when nudging the player via debug keys.
+const DEBUG_NUDGE_STEP = 0.5; // Set the base increment for player position nudging.
+// Multiplier applied when holding Shift during a nudge.
+const DEBUG_NUDGE_MULTIPLIER = 10; // Increase the nudge distance when Shift is held.
+// Helper to print the player's current world position to the console.
+function debugLogPlayerPosition() { // Define a function to log the player position.
+    // Log the current player position with two decimal places for readability.
+    console.log(`Player pos -> x: ${yawObject.position.x.toFixed(2)}, y: ${yawObject.position.y.toFixed(2)}, z: ${yawObject.position.z.toFixed(2)}`); // Output the player coordinates.
+}
+
 // Track whether the left mouse button is held down.
 let isMouseDown = false;
 // Store the previous x coordinate of the active touch.
@@ -638,6 +1071,54 @@ function togglePause() {
 function onKeyDown(event) {
     // Set the key state to true.
     keys[event.key.toLowerCase()] = true;
+    // Calculate the nudge step based on whether Shift is held.
+    const nudgeStep = (event.shiftKey ? DEBUG_NUDGE_STEP * DEBUG_NUDGE_MULTIPLIER : DEBUG_NUDGE_STEP); // Determine how far to move per key press.
+    // Handle debug nudging keys to reposition the player.
+    if (event.code === 'ArrowUp') { // Check for the up arrow key.
+        // Move the player forward along the z axis.
+        yawObject.position.z -= nudgeStep; // Decrease z to move forward in world space.
+        // Log the updated player position to the console.
+        debugLogPlayerPosition(); // Print the new coordinates for reference.
+        // Prevent the browser from scrolling the page.
+        event.preventDefault(); // Disable default arrow key behavior.
+    } else if (event.code === 'ArrowDown') { // Check for the down arrow key.
+        // Move the player backward along the z axis.
+        yawObject.position.z += nudgeStep; // Increase z to move backward in world space.
+        // Log the updated player position to the console.
+        debugLogPlayerPosition(); // Print the new coordinates for reference.
+        // Prevent the browser from scrolling the page.
+        event.preventDefault(); // Disable default arrow key behavior.
+    } else if (event.code === 'ArrowLeft') { // Check for the left arrow key.
+        // Move the player left along the x axis.
+        yawObject.position.x -= nudgeStep; // Decrease x to nudge left.
+        // Log the updated player position to the console.
+        debugLogPlayerPosition(); // Print the new coordinates for reference.
+        // Prevent the browser from scrolling the page.
+        event.preventDefault(); // Disable default arrow key behavior.
+    } else if (event.code === 'ArrowRight') { // Check for the right arrow key.
+        // Move the player right along the x axis.
+        yawObject.position.x += nudgeStep; // Increase x to nudge right.
+        // Log the updated player position to the console.
+        debugLogPlayerPosition(); // Print the new coordinates for reference.
+        // Prevent the browser from scrolling the page.
+        event.preventDefault(); // Disable default arrow key behavior.
+    } else if (event.code === 'PageUp') { // Check for the PageUp key.
+        // Move the player upward along the y axis.
+        yawObject.position.y += nudgeStep; // Increase y to raise the player.
+        // Mark the player as airborne so gravity applies smoothly.
+        isGrounded = false; // Clear grounded state to avoid snapping.
+        // Log the updated player position to the console.
+        debugLogPlayerPosition(); // Print the new coordinates for reference.
+        // Prevent the browser from scrolling the page.
+        event.preventDefault(); // Disable default page navigation behavior.
+    } else if (event.code === 'PageDown') { // Check for the PageDown key.
+        // Move the player downward along the y axis.
+        yawObject.position.y -= nudgeStep; // Decrease y to lower the player.
+        // Log the updated player position to the console.
+        debugLogPlayerPosition(); // Print the new coordinates for reference.
+        // Prevent the browser from scrolling the page.
+        event.preventDefault(); // Disable default page navigation behavior.
+    }
     // Check if the spacebar was pressed.
     if (event.code === 'Space') {
         // Verify the player is on the ground.
@@ -822,6 +1303,8 @@ function onWindowResize() {
     camera.updateProjectionMatrix();
     // Set the size of the renderer to the new window size.
     renderer.setSize(window.innerWidth, window.innerHeight);
+    // Update the pixel ratio using the configured quality mode.
+    renderer.setPixelRatio(HIGH_QUALITY ? Math.min(2, window.devicePixelRatio) : Math.min(1.25, window.devicePixelRatio)); // Reapply the pixel ratio cap on resize.
     // Update the offscreen canvas width.
     uiCanvas.width = window.innerWidth;
     // Update the offscreen canvas height.
@@ -1173,7 +1656,9 @@ function findEnemySpawnPosition() {
         // Create a random z position within the play area.
         const z = (Math.random() - 0.5) * 50;
         // Create a vector for the potential spawn position.
-        const position = new THREE.Vector3(x, 1, z);
+        const position = new THREE.Vector3(x, 1, z); // Initialize with a default y value.
+        // Adjust the spawn y to rest on the surface of the scene.
+        position.y = getGroundHeight(x, z) + 1; // Place enemies slightly above the ground.
         // Increment the attempt counter.
         attempts++;
         // Skip this position if it collides with any obstacle.
@@ -1293,13 +1778,33 @@ function animate(currentTime) {
     // Calculate FPS.
     frameCount++;
     // Check if one second has passed.
-    if (currentTime > lastFrameTime + 1000) {
+    if (currentTime > lastFrameTime + 1000) { // Check once per second to update FPS and dynamic settings.
         // Calculate FPS.
-        fps = Math.round(frameCount * 1000 / (currentTime - lastFrameTime));
+        fps = Math.round(frameCount * 1000 / (currentTime - lastFrameTime)); // Compute frames per second.
         // Reset last frame time.
-        lastFrameTime = currentTime;
+        lastFrameTime = currentTime; // Store the time of this sampling window.
         // Reset frame count.
-        frameCount = 0;
+        frameCount = 0; // Zero the frame counter for the next window.
+        // Dynamically adjust pixel ratio to balance performance and clarity.
+        if (!HIGH_QUALITY) { // Only perform dynamic scaling in low quality mode.
+            // Get the current pixel ratio used by the renderer.
+            const currentPR = renderer.getPixelRatio(); // Read the current device pixel ratio cap.
+            // Define the allowed range for dynamic scaling.
+            const minPR = 0.8; // Set the minimum pixel ratio for acceptable clarity.
+            const maxPR = 1.25; // Set the maximum pixel ratio for performance mode.
+            // Decide on a small step to adjust the pixel ratio.
+            const step = 0.1; // Choose a gentle increment to avoid visible jumps.
+            // Decrease pixel ratio if FPS drops below target.
+            if (fps < 50 && currentPR > minPR) { // Check for low performance.
+                // Apply a lower pixel ratio to reduce GPU workload.
+                renderer.setPixelRatio(Math.max(minPR, currentPR - step)); // Lower the pixel ratio within bounds.
+            }
+            // Increase pixel ratio if there is headroom.
+            if (fps > 58 && currentPR < maxPR) { // Check if performance allows a higher resolution.
+                // Apply a higher pixel ratio to improve clarity.
+                renderer.setPixelRatio(Math.min(maxPR, currentPR + step)); // Raise the pixel ratio within bounds.
+            }
+        }
     }
 
     // If the game is paused, do not update game logic.
@@ -1443,8 +1948,8 @@ function animate(currentTime) {
     // Clamp the player's z position within the ground boundaries.
     yawObject.position.z = Math.max(-250, Math.min(250, yawObject.position.z));
 
-    // Get the surface height directly below the player.
-    const surfaceY = getGroundHeight(yawObject.position.x, yawObject.position.z);
+    // Get the surface height directly below the player using a small cache.
+    const surfaceY = getPlayerSurfaceY(); // Retrieve the ground height with caching for performance.
     // Calculate the y position where the player's camera should rest.
     const targetY = surfaceY + groundLevel;
     // Apply gravity to the vertical velocity.
@@ -1506,10 +2011,10 @@ function animate(currentTime) {
                 // Mark the rocket for explosion.
                 explode = true;
             }
-            // Explode when the rocket touches the ground.
-            if (projectile.position.y <= 0) {
+            // Explode when the rocket touches the ground surface from the scene.
+            if (projectile.position.y <= getGroundHeight(projectile.position.x, projectile.position.z)) { // Compare rocket height to surface height.
                 // Mark the rocket for explosion.
-                explode = true;
+                explode = true; // Flag for explosion on ground impact.
             }
             // Explode when leaving the play area.
             if (Math.abs(projectile.position.x) > 250 || Math.abs(projectile.position.z) > 250) {

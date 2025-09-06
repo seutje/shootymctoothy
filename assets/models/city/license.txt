@@ -1,0 +1,8 @@
+Model Information:
+* title:	Beautiful city
+* source:	https://sketchfab.com/3d-models/beautiful-city-2c02d343100f4e129f6d26ebdae128e3
+* author:	golukumar (https://sketchfab.com/mortalityrexotable)
+
+Model License:
+* license type:	SKETCHFAB Standard (https://sketchfab.com/licenses)
+* requirements:	Under basic restrictions, use worldwide, on all types of media, commercially or not, and in all types of derivative works

@@ -11,6 +11,41 @@ const projectileSpeed = 1;
 // Store the smoothing factor for AI mouse movement.
 const rotationSmoothing = 0.1;
 
+// Milliseconds to wait between expensive line of sight checks.
+const LOS_THROTTLE_MS = 250; // Define how frequently LOS raycasts may run for a given target.
+// Helper to throttle line of sight tests and reuse recent results.
+function throttledHasLineOfSight(from, to, entity) { // Define a function that caches LOS results briefly.
+    // Use the current wall clock time for throttling decisions.
+    const now = Date.now(); // Read the current time in milliseconds.
+    // If an entity object is provided, store the cache on it; else use a static cache.
+    let cacheOwner = entity || throttledHasLineOfSight; // Choose where to store the cache data.
+    // Initialize the cache object if missing.
+    if (!cacheOwner._losCache) { cacheOwner._losCache = { time: 0, from: new THREE.Vector3(), to: new THREE.Vector3(), result: false }; } // Create the cache container.
+    // Read the cache object for convenience.
+    const cache = cacheOwner._losCache; // Access the last LOS computation data.
+    // Check if the cache is still valid and the endpoints have not changed much.
+    const fresh = (now - cache.time) < LOS_THROTTLE_MS; // Determine if the cached result is still recent.
+    // Compute endpoint movement distances since the last computation.
+    const movedFrom = cache.from.distanceTo(from); // Measure how far the start point moved.
+    const movedTo = cache.to.distanceTo(to); // Measure how far the end point moved.
+    // Decide whether the cache can be reused based on age and movement thresholds.
+    if (fresh && movedFrom < 0.5 && movedTo < 0.5) { // Check if the cached result is acceptable.
+        // Return the previously computed visibility result.
+        return cache.result; // Provide the cached line of sight boolean.
+    }
+    // Compute a fresh result using the underlying function.
+    const result = hasLineOfSight(from, to); // Perform the expensive raycast check.
+    // Update the cache timestamp.
+    cache.time = now; // Record when this computation occurred.
+    // Store the endpoints used for this computation.
+    cache.from.copy(from); // Save the start point used.
+    cache.to.copy(to); // Save the end point used.
+    // Store the computed result for reuse.
+    cache.result = result; // Save the visibility result in the cache.
+    // Return the newly computed visibility value.
+    return result; // Provide the outcome of the raycast.
+} // End of throttledHasLineOfSight helper.
+
 // Function to find the closest visible health pack.
 function findVisibleHealthPack() {
     // Initialize the closest pack variable.
@@ -19,8 +54,8 @@ function findVisibleHealthPack() {
     let minDist = Infinity;
     // Iterate over each health pack.
     healthPacks.forEach(pack => {
-        // Check if the pack is visible to the player.
-        if (hasLineOfSight(yawObject.position, pack.position)) {
+        // Check if the pack is visible to the player using throttled line of sight.
+        if (throttledHasLineOfSight(yawObject.position, pack.position)) {
             // Calculate the distance to this pack.
             const dist = yawObject.position.distanceTo(pack.position);
             // Update the closest pack if this one is nearer.
@@ -170,8 +205,8 @@ function updateAutoplayAI(currentTime) {
             // Set this enemy as the new fallback.
             fallback = enemy;
         }
-        // Check if the enemy is visible without obstacles.
-        if (hasLineOfSight(yawObject.position, enemy.position)) {
+        // Check if the enemy is visible without obstacles using throttled checks.
+        if (throttledHasLineOfSight(yawObject.position, enemy.position)) {
             // Check if this enemy is closer than the current target.
             if (dist < minDist) {
                 // Set the minimum distance to this enemy's distance.
@@ -216,8 +251,8 @@ function updateAutoplayAI(currentTime) {
         camera.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, camera.rotation.x));
         // Fire a shot periodically when there is a clear path.
         if (currentTime > aiShootTime) {
-            // Check if the player can see the predicted position without obstacles.
-            if (hasLineOfSight(yawObject.position, predicted)) {
+            // Check if the player can see the predicted position without obstacles using the last enemy LOS result when recent.
+            if (throttledHasLineOfSight(yawObject.position, predicted, target)) {
                 // Create a projectile towards the target.
                 createProjectile();
             }
