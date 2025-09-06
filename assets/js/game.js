@@ -2148,11 +2148,34 @@ function animate(currentTime) {
     updateEnemySpawn();
 
     // Fire repeatedly when the mouse is held down.
-    if (isMouseDown && currentTime - lastPlayerShotTime >= playerShotInterval) {
-        // Create another projectile.
-        createProjectile();
-        // Update the time of the last shot.
-        lastPlayerShotTime = currentTime;
+    if (isMouseDown && currentTime - lastPlayerShotTime >= playerShotInterval) { // Check if it is time to auto-fire again.
+        // Handle the pistol weapon with magazine and reload logic.
+        if (currentWeapon === 0) { // Check if the pistol is currently selected.
+            // Do not fire while reloading the pistol.
+            if (pistolReloading) { // Verify that a reload is not in progress.
+                // Skip firing during reload to prevent shooting through the animation.
+                // No action taken here while reloading.
+            } else if (pistolAmmo <= 0) { // Check if the magazine is empty.
+                // Start the appropriate reload sequence for an empty magazine.
+                startPistolReload(); // Initiate the reload since no rounds remain.
+            } else { // Proceed to fire a round when ammo is available and not reloading.
+                // Determine if this shot will empty the magazine.
+                const isLastShotAuto = pistolAmmo === 1; // Check if the current round is the last one.
+                // Play the correct firing animation for this auto-fire shot.
+                playPistolAction(isLastShotAuto ? 'firelast' : 'fire', true); // Trigger the matching pistol animation.
+                // Create the projectile for this pistol shot.
+                createProjectile(); // Spawn the pistol bullet mesh into the scene.
+                // Decrease the pistol ammo count by one.
+                pistolAmmo -= 1; // Deduct a round from the pistol magazine.
+                // Record the time of this shot to enforce the fire rate.
+                lastPlayerShotTime = currentTime; // Update the last shot timestamp.
+            }
+        } else { // Handle other weapon types that do not use the pistol magazine.
+            // Create another projectile for non-pistol weapons.
+            createProjectile(); // Spawn a projectile for the active non-pistol weapon.
+            // Update the time of the last shot to throttle the fire rate.
+            lastPlayerShotTime = currentTime; // Store the shot time for the next interval check.
+        }
     }
 
     // Reset the input velocity vector.
