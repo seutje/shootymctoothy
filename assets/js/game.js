@@ -626,11 +626,21 @@ function loadPistolModel() { // Define a function to asynchronously load the pis
             const fireClip = THREE.AnimationUtils.subclip(source, 'fire', 0, 11, 30); // Create a subclip for firing.
             const readyClip = THREE.AnimationUtils.subclip(source, 'ready', 187, 233, 30); // Create a subclip for ready.
             const hideClip = THREE.AnimationUtils.subclip(source, 'hide', 176, 187, 30); // Create a subclip for hide.
+            const ambientClip = THREE.AnimationUtils.subclip(source, 'ambient', 234, 264, 30); // Create a subclip for ambient idle.
             // Create actions for each subclip and store them.
             pistolActions.fire = pistolMixer.clipAction(fireClip); // Build an action for the fire animation.
             pistolActions.ready = pistolMixer.clipAction(readyClip); // Build an action for the ready animation.
             pistolActions.hide = pistolMixer.clipAction(hideClip); // Build an action for the hide animation.
+            pistolActions.ambient = pistolMixer.clipAction(ambientClip); // Build an action for the ambient idle animation.
         }
+        // Resume ambient after any one-shot action completes if the pistol is selected.
+        pistolMixer.addEventListener('finished', () => { // Listen for animation completion events.
+            // Check that the pistol is still the active weapon and visible.
+            if (currentWeapon === 0 && pistolObject && pistolObject.visible) { // Ensure the pistol is selected and shown.
+                // Play the ambient idle loop to keep the pistol animated when idle.
+                playPistolAction('ambient', false); // Switch to looping ambient animation.
+            }
+        }); // End of finished event listener.
         // Hide the simple placeholder pistol so only the model is shown when selected.
         gunGroup.visible = false; // Disable the placeholder pistol group.
         // Hide the pistol by default when another weapon is selected.
@@ -1148,6 +1158,7 @@ let pistolTemplate = null; // Store the loaded pistol template scene for cloning
 let pistolObject = null; // Store the pistol instance attached to the camera.
 let pistolMixer = null; // Store the AnimationMixer for controlling pistol animations.
 let pistolActions = {}; // Store a map from action name to AnimationAction for easy control.
+let pistolActiveActionName = null; // Track which pistol action is currently active.
 let pistolReady = false; // Track whether the pistol model has finished loading and is ready.
 // Helper to play a specific pistol action by name.
 function playPistolAction(name, loopOnce = true) { // Define a function to play a pistol animation action.
@@ -1157,14 +1168,16 @@ function playPistolAction(name, loopOnce = true) { // Define a function to play 
     Object.keys(pistolActions).forEach(k => { pistolActions[k].stop(); }); // Stop all previously running actions.
     // Retrieve the requested action by name.
     const action = pistolActions[name]; // Access the target animation action.
-    // Set the action to clamp at the last frame when it finishes.
-    action.clampWhenFinished = true; // Prevent snapping back after playback.
+    // Set clamping and looping based on whether this is a one-shot or looping action.
+    action.clampWhenFinished = loopOnce; // Clamp only for one-shot actions.
     // Select a loop mode based on the provided parameter.
-    action.setLoop(loopOnce ? THREE.LoopOnce : THREE.LoopRepeat, 1); // Configure the loop behavior.
+    action.setLoop(loopOnce ? THREE.LoopOnce : THREE.LoopRepeat, 1); // Use LoopRepeat for ambient idles.
     // Reset the action time to the beginning.
     action.reset(); // Prepare the action to start from frame zero.
     // Start the action playback.
     action.play(); // Begin playing the pistol animation.
+    // Remember which action is currently active for idle handling.
+    pistolActiveActionName = name; // Store the active action name.
 } // End of playPistolAction helper.
 
 // Helper to update the pistol mixer every frame when available.
@@ -2036,6 +2049,17 @@ function animate(currentTime) {
 
     // Update the pistol animation mixer using a smoothed delta.
     updatePistolMixer(1 / 60); // Advance the pistol mixer assuming a nominal frame time.
+    // Ensure the pistol plays ambient idle when selected and not busy with other actions.
+    if (pistolReady && currentWeapon === 0 && pistolObject && pistolObject.visible) { // Confirm pistol state and visibility.
+        // Determine if an action is currently active and still running.
+        const active = pistolActiveActionName; // Read the currently active pistol action name.
+        const isRunning = active && pistolActions[active] ? pistolActions[active].isRunning() : false; // Check if it is playing.
+        // Start ambient loop if nothing else is running.
+        if (!isRunning && pistolActions.ambient) { // Ensure ambient exists and no one-shot is in progress.
+            // Play the looping ambient animation to keep the pistol animated while idling.
+            playPistolAction('ambient', false); // Trigger the ambient idle loop.
+        }
+    }
 
     // If the game is paused, do not update game logic.
     if (gamePaused) {
