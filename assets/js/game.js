@@ -41,6 +41,14 @@ const collisionGrid = new Map(); // Create a map to store which boxes occupy whi
 // Minimum thickness below which geometry is treated as pass-through.
 const THIN_OBJECT_MIN_THICKNESS = 1.5; // Increase threshold so slightly thicker objects are pass-through.
 
+// Enemy model configuration and loading state.
+const ENEMY_MODEL_PATH = 'assets/models/monster/'; // Define the base path where the enemy model assets reside.
+const ENEMY_MODEL_FILE = 'scene.gltf'; // Define the filename of the enemy model to load.
+const ENEMY_MODEL_SCALE = 1.0; // Define a uniform scale factor to apply to the enemy model.
+let enemyModelTemplate = null; // Store the loaded enemy model that will be cloned for each enemy.
+let enemyModelReady = false; // Track whether the enemy model has finished loading.
+let enemySpawnQueue = 0; // Count how many enemies should be spawned once the model is ready.
+
 // Helper to compute a grid cell index from a coordinate.
 function gridIndex(v) { // Define a function that converts a coordinate to a grid index.
     // Divide by cell size and floor to get the integer index.
@@ -382,6 +390,38 @@ if (USE_GLTF_SCENE) { // Only load the GLTF when the feature flag is enabled.
         if (renderer && renderer.domElement) { renderer.domElement.style.display = 'block'; } // Show the 3D canvas despite the error.
     });
 } // End of GLTF scene loading block.
+
+// Load the enemy model used for all enemy instances.
+(function loadEnemyModel() { // Define an IIFE to start loading the enemy model immediately.
+    // Create a loader dedicated to the enemy model.
+    const loader = new THREE.GLTFLoader(); // Instantiate the GLTFLoader for enemy assets.
+    // Set the base path for resolving the enemy model resources.
+    loader.setPath(ENEMY_MODEL_PATH); // Configure the loader to read files from the monster folder.
+    // Start loading the enemy model file.
+    loader.load(ENEMY_MODEL_FILE, (gltf) => { // Begin asynchronous loading of the enemy glTF.
+        // Extract the scene graph that represents the enemy.
+        const root = gltf.scene; // Access the enemy model's root object.
+        // Apply the configured scale to the enemy model.
+        root.scale.setScalar(ENEMY_MODEL_SCALE); // Uniformly scale the enemy model.
+        // Ensure the enemy meshes interact with lights.
+        root.traverse(o => { if (o.isMesh) { o.castShadow = HIGH_QUALITY; o.receiveShadow = HIGH_QUALITY; } }); // Configure mesh shadow flags.
+        // Replace heavy materials when high quality is disabled.
+        if (!HIGH_QUALITY) { convertCityMaterialsLowQuality(root); } // Downgrade materials for performance parity.
+        // Store the loaded model as the template for future clones.
+        enemyModelTemplate = root; // Save the root for cloning per enemy.
+        // Mark the enemy model as ready.
+        enemyModelReady = true; // Indicate that enemies can now be spawned.
+        // Spawn any queued enemies that were requested before the model was available.
+        for (let i = 0; i < enemySpawnQueue; i++) { createEnemy(); } // Create the pending enemies.
+        // Reset the spawn queue after processing.
+        enemySpawnQueue = 0; // Clear the count of queued spawns.
+    }, undefined, (err) => { // Provide an error callback for troubleshooting.
+        // Log an error if the enemy model fails to load.
+        console.error('Failed to load enemy model:', err); // Print the error to the console for debugging.
+        // Fallback to allow enemies to spawn using simple boxes when the model fails.
+        enemyModelReady = false; // Keep the ready flag false to trigger box fallback.
+    });
+})(); // End of enemy model loading IIFE.
 
 // Create a new perspective camera.
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000); // Create a perspective camera.
@@ -1441,7 +1481,7 @@ function createProjectile() {
         // Create a raycaster for the hitscan attack.
         const raycaster = new THREE.Raycaster(start, dir, 0, lightningRange);
         // Find enemy objects intersected by the ray.
-        const hits = raycaster.intersectObjects(enemies, false);
+        const hits = raycaster.intersectObjects(enemies, true);
         // Check if at least one enemy was hit.
         if (hits.length > 0) {
             // Loop over every hit in the list.
@@ -1772,22 +1812,28 @@ function findEnemySpawnPosition() {
 
 // The function to create an enemy.
 function createEnemy() {
-    // Create a box geometry for the enemy.
-    const enemyGeometry = new THREE.BoxGeometry(2, 2, 2);
-    // Create a material for the enemy using the loaded texture that reacts to light.
-    const enemyMaterial = new THREE.MeshLambertMaterial({ map: enemyTexture });
-    // Create a mesh from the enemy geometry and material.
-    const enemy = new THREE.Mesh(enemyGeometry, enemyMaterial);
     // Find a valid spawn position for the enemy.
     const spawn = findEnemySpawnPosition();
-    // Set the enemy's x position.
-    enemy.position.x = spawn.x;
-    // Set the enemy's z position.
-    enemy.position.z = spawn.z;
-    // Set the enemy's y position.
-    enemy.position.y = spawn.y;
-    // Allow the enemy to cast shadows.
-    enemy.castShadow = true;
+    // Decide whether to use the model or a simple box fallback.
+    let enemy; // Declare a variable to hold the enemy object.
+    // Check if the enemy model is available.
+    if (enemyModelReady && enemyModelTemplate) { // Use the loaded model when ready.
+        // Clone the template to create a unique instance for this enemy.
+        enemy = enemyModelTemplate.clone(true); // Deep clone the enemy model hierarchy.
+        // Position the enemy at the chosen spawn point.
+        enemy.position.set(spawn.x, spawn.y, spawn.z); // Place the enemy at the spawn location.
+    } else {
+        // Create a simple box geometry as a fallback enemy.
+        const enemyGeometry = new THREE.BoxGeometry(2, 2, 2); // Define a cube to represent the enemy.
+        // Create a material using the existing enemy texture.
+        const enemyMaterial = new THREE.MeshLambertMaterial({ map: enemyTexture }); // Build a lit material for the enemy.
+        // Create a mesh from the fallback geometry and material.
+        enemy = new THREE.Mesh(enemyGeometry, enemyMaterial); // Instantiate the fallback enemy mesh.
+        // Position the fallback enemy at the spawn point.
+        enemy.position.set(spawn.x, spawn.y, spawn.z); // Place the fallback enemy at the spawn location.
+        // Enable shadows on the fallback mesh when in high quality mode.
+        enemy.castShadow = HIGH_QUALITY; // Allow shadow casting based on quality settings.
+    }
     // Set the last shot time for the enemy.
     enemy.lastShotTime = Date.now();
     // Set the shot interval for the enemy (randomized).
