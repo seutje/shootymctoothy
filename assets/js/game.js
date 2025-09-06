@@ -592,6 +592,55 @@ lightningGroup.visible = false;
 // Attach the lightning gun group to the camera.
 camera.add(lightningGroup);
 
+// Load the pistol GLTF model and attach it to the camera.
+(function loadPistolModel() { // Define an IIFE to asynchronously load the pistol model.
+    // Create a loader for the pistol model.
+    const loader = new THREE.GLTFLoader(); // Instantiate a GLTFLoader for the pistol asset.
+    // Set the base path for the pistol resources.
+    loader.setPath(PISTOL_MODEL_PATH); // Configure the loader to resolve relative URIs from the pistol folder.
+    // Begin loading the pistol scene file.
+    loader.load(PISTOL_MODEL_FILE, (gltf) => { // Load the pistol model asynchronously.
+        // Store the template scene for future cloning if needed.
+        pistolTemplate = gltf.scene; // Save the loaded pistol scene graph as a template.
+        // Create the instance to attach to the camera.
+        pistolObject = pistolTemplate.clone(true); // Clone the pistol so we can freely modify it.
+        // Apply the configured scale to the pistol instance.
+        pistolObject.scale.setScalar(PISTOL_MODEL_SCALE); // Scale the pistol uniformly.
+        // Position the pistol near the prior simple gun placement.
+        pistolObject.position.copy(gunBasePosition); // Reuse the first person weapon offset.
+        // Ensure the pistol meshes respect lighting and quality settings.
+        pistolObject.traverse(o => { if (o.isMesh) { o.castShadow = HIGH_QUALITY; o.receiveShadow = HIGH_QUALITY; } }); // Configure mesh flags.
+        // Attach the pistol model to the camera so it moves with the view.
+        camera.add(pistolObject); // Parent the pistol to the camera.
+        // Prepare an animation mixer for the pistol.
+        pistolMixer = new THREE.AnimationMixer(pistolObject); // Create a mixer to drive the pistol animations.
+        // Create animation clips from the source animations.
+        if (gltf.animations && gltf.animations.length > 0) { // Check if any animations are present.
+            // Use the first animation track as the source timeline.
+            const source = gltf.animations[0]; // Select the first clip from the model.
+            // Extract subclips for the required actions using frame ranges.
+            const fireClip = THREE.AnimationUtils.subclip(source, 'fire', 0, 11, 30); // Create a subclip for firing.
+            const readyClip = THREE.AnimationUtils.subclip(source, 'ready', 187, 233, 30); // Create a subclip for ready.
+            const hideClip = THREE.AnimationUtils.subclip(source, 'hide', 176, 187, 30); // Create a subclip for hide.
+            // Create actions for each subclip and store them.
+            pistolActions.fire = pistolMixer.clipAction(fireClip); // Build an action for the fire animation.
+            pistolActions.ready = pistolMixer.clipAction(readyClip); // Build an action for the ready animation.
+            pistolActions.hide = pistolMixer.clipAction(hideClip); // Build an action for the hide animation.
+        }
+        // Hide the simple placeholder pistol so only the model is shown when selected.
+        gunGroup.visible = false; // Disable the placeholder pistol group.
+        // Hide the pistol by default when another weapon is selected.
+        pistolObject.visible = currentWeapon === 0; // Only show the pistol when it is selected.
+        // Mark the pistol as ready for use.
+        pistolReady = true; // Indicate the pistol model and animations can be used.
+    }, undefined, (err) => { // Provide an error callback for troubleshooting.
+        // Log an error when the pistol model fails to load.
+        console.error('Failed to load pistol model:', err); // Print an error to the console.
+        // Keep using the placeholder pistol if the model cannot be loaded.
+        pistolReady = false; // Leave the ready flag false to avoid animation calls.
+    });
+})(); // End of pistol model loading IIFE.
+
 // Store the world width for obstacle placement calculations.
 const worldWidth = 500; // Define the approximate world width for bounds.
 // Store the world depth for obstacle placement calculations.
@@ -1090,6 +1139,42 @@ let gunTiltY = 0;
 // Track the index of the current weapon.
 let currentWeapon = 0;
 
+// Configuration for the pistol model path and scale.
+const PISTOL_MODEL_PATH = 'assets/models/pistol/'; // Define the base path for the pistol model assets.
+const PISTOL_MODEL_FILE = 'scene.gltf'; // Define the filename for the pistol model file.
+const PISTOL_MODEL_SCALE = 1.0; // Define the uniform scale to apply to the pistol model.
+// References used to manage the pistol model instance and animation.
+let pistolTemplate = null; // Store the loaded pistol template scene for cloning.
+let pistolObject = null; // Store the pistol instance attached to the camera.
+let pistolMixer = null; // Store the AnimationMixer for controlling pistol animations.
+let pistolActions = {}; // Store a map from action name to AnimationAction for easy control.
+let pistolReady = false; // Track whether the pistol model has finished loading and is ready.
+// Helper to play a specific pistol action by name.
+function playPistolAction(name, loopOnce = true) { // Define a function to play a pistol animation action.
+    // Guard when the pistol is not ready or action missing.
+    if (!pistolReady || !pistolMixer || !pistolActions[name]) { return; } // Exit when action cannot be played.
+    // Loop over all actions to stop them before starting a new one.
+    Object.keys(pistolActions).forEach(k => { pistolActions[k].stop(); }); // Stop all previously running actions.
+    // Retrieve the requested action by name.
+    const action = pistolActions[name]; // Access the target animation action.
+    // Set the action to clamp at the last frame when it finishes.
+    action.clampWhenFinished = true; // Prevent snapping back after playback.
+    // Select a loop mode based on the provided parameter.
+    action.setLoop(loopOnce ? THREE.LoopOnce : THREE.LoopRepeat, 1); // Configure the loop behavior.
+    // Reset the action time to the beginning.
+    action.reset(); // Prepare the action to start from frame zero.
+    // Start the action playback.
+    action.play(); // Begin playing the pistol animation.
+} // End of playPistolAction helper.
+
+// Helper to update the pistol mixer every frame when available.
+function updatePistolMixer(delta) { // Define a function to advance the pistol animation by delta time.
+    // Guard against missing mixer or model not ready.
+    if (!pistolReady || !pistolMixer) { return; } // Exit when no animation needs updating.
+    // Advance the animation timeline for the pistol.
+    pistolMixer.update(delta); // Step the animation by the elapsed time.
+} // End of updatePistolMixer helper.
+
 // Function to set the active weapon.
 function setWeapon(index) {
     // Assign the index to the current weapon variable.
@@ -1098,15 +1183,25 @@ function setWeapon(index) {
     if (currentWeapon === 0) {
         // Use the pistol fire rate for the shot interval.
         playerShotInterval = gunShotInterval;
+        // Show the pistol model when it is ready.
+        if (pistolObject) { pistolObject.visible = true; } // Display the pistol model when selected.
+        // Hide the placeholder pistol group when the model is shown.
+        gunGroup.visible = pistolObject ? false : true; // Use placeholder only if model unavailable.
+        // Play the ready animation when switching to the pistol.
+        playPistolAction('ready', true); // Trigger the pistol ready animation.
     } else if (currentWeapon === 1) {
         // Use the rocket fire rate when the rocket launcher is selected.
         playerShotInterval = rocketShotInterval;
+        // Hide the pistol when switching away to rockets.
+        if (pistolObject) { playPistolAction('hide', true); pistolObject.visible = false; } // Hide the pistol with animation.
     } else {
         // Use the lightning fire rate when the lightning gun is selected.
         playerShotInterval = lightningShotInterval;
+        // Hide the pistol when switching away to lightning.
+        if (pistolObject) { playPistolAction('hide', true); pistolObject.visible = false; } // Hide the pistol with animation.
     }
     // Set the visibility of the pistol model.
-    gunGroup.visible = currentWeapon === 0;
+    gunGroup.visible = pistolObject ? false : currentWeapon === 0; // Show placeholder only if no model.
     // Set the visibility of the rocket launcher model.
     rocketGroup.visible = currentWeapon === 1;
     // Set the visibility of the lightning gun model.
@@ -1346,6 +1441,8 @@ function onMouseDown(event) {
     if (event.button === 0) {
         // Mark that the mouse button is held down.
         isMouseDown = true;
+        // Play the pistol fire animation when firing the pistol.
+        if (currentWeapon === 0) { playPistolAction('fire', true); }
         // Create a projectile immediately.
         createProjectile();
         // Record the time of this shot using the high-resolution timer.
@@ -1933,6 +2030,9 @@ function animate(currentTime) {
             }
         }
     }
+
+    // Update the pistol animation mixer using a smoothed delta.
+    updatePistolMixer(1 / 60); // Advance the pistol mixer assuming a nominal frame time.
 
     // If the game is paused, do not update game logic.
     if (gamePaused) {
