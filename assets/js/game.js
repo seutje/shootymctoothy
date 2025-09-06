@@ -44,7 +44,7 @@ const THIN_OBJECT_MIN_THICKNESS = 1.5; // Increase threshold so slightly thicker
 // Enemy model configuration and loading state.
 const ENEMY_MODEL_PATH = 'assets/models/monster/'; // Define the base path where the enemy model assets reside.
 const ENEMY_MODEL_FILE = 'scene.gltf'; // Define the filename of the enemy model to load.
-const ENEMY_MODEL_SCALE = 1.0; // Define a uniform scale factor to apply to the enemy model.
+const ENEMY_MODEL_SCALE = 1; // Define a uniform scale factor to apply to the enemy model (1/20th size).
 let enemyModelTemplate = null; // Store the loaded enemy model that will be cloned for each enemy.
 let enemyModelReady = false; // Track whether the enemy model has finished loading.
 let enemySpawnQueue = 0; // Count how many enemies should be spawned once the model is ready.
@@ -1820,11 +1820,13 @@ function createEnemy() {
     if (enemyModelReady && enemyModelTemplate) { // Use the loaded model when ready.
         // Clone the template to create a unique instance for this enemy.
         enemy = enemyModelTemplate.clone(true); // Deep clone the enemy model hierarchy.
+        // Ensure the clone scale matches the configured enemy scale.
+        enemy.scale.setScalar(ENEMY_MODEL_SCALE); // Apply uniform scaling directly on the clone as a safeguard.
         // Position the enemy at the chosen spawn point.
         enemy.position.set(spawn.x, spawn.y, spawn.z); // Place the enemy at the spawn location.
     } else {
         // Create a simple box geometry as a fallback enemy.
-        const enemyGeometry = new THREE.BoxGeometry(2, 2, 2); // Define a cube to represent the enemy.
+        const enemyGeometry = new THREE.BoxGeometry(0.1, 0.1, 0.1); // Define a smaller cube (1/20th) to represent the enemy.
         // Create a material using the existing enemy texture.
         const enemyMaterial = new THREE.MeshLambertMaterial({ map: enemyTexture }); // Build a lit material for the enemy.
         // Create a mesh from the fallback geometry and material.
