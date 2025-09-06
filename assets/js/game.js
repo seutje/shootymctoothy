@@ -25,6 +25,10 @@ const CITY_SCALE = 15; // Adjust this scale to make the city larger or smaller.
 const CITY_OFFSET = new THREE.Vector3(0, 0, 0); // Adjust this offset to reposition the city.
 // Flag to track whether assets are still loading to control rendering.
 let assetsLoading = USE_GLTF_SCENE ? true : false; // Start in loading state when using the GLTF scene.
+// Store the world width for obstacle placement calculations and tiling.
+const worldWidth = 500; // Define the approximate world width for bounds.
+// Store the world depth for obstacle placement calculations and tiling.
+const worldDepth = 500; // Define the approximate world depth for bounds.
 
 // Arrays used for collision detection against the loaded GLTF scene.
 const collisionMeshes = []; // Store all mesh objects from the GLTF for raycasting.
@@ -593,7 +597,7 @@ lightningGroup.visible = false;
 camera.add(lightningGroup);
 
 // Load the pistol GLTF model and attach it to the camera.
-(function loadPistolModel() { // Define an IIFE to asynchronously load the pistol model.
+function loadPistolModel() { // Define a function to asynchronously load the pistol model.
     // Create a loader for the pistol model.
     const loader = new THREE.GLTFLoader(); // Instantiate a GLTFLoader for the pistol asset.
     // Set the base path for the pistol resources.
@@ -639,12 +643,8 @@ camera.add(lightningGroup);
         // Keep using the placeholder pistol if the model cannot be loaded.
         pistolReady = false; // Leave the ready flag false to avoid animation calls.
     });
-})(); // End of pistol model loading IIFE.
+} // End of pistol model loading function.
 
-// Store the world width for obstacle placement calculations.
-const worldWidth = 500; // Define the approximate world width for bounds.
-// Store the world depth for obstacle placement calculations.
-const worldDepth = 500; // Define the approximate world depth for bounds.
 // Define the size of each obstacle for coverage checks.
 const obstacleSize = 5; // Size used only for procedural obstacles (unused with GLTF).
 // Define the maximum fraction of the world that obstacles may occupy.
@@ -1174,6 +1174,9 @@ function updatePistolMixer(delta) { // Define a function to advance the pistol a
     // Advance the animation timeline for the pistol.
     pistolMixer.update(delta); // Step the animation by the elapsed time.
 } // End of updatePistolMixer helper.
+
+// Initialize the pistol model after constants and helpers are defined.
+loadPistolModel(); // Start loading the pistol model now that configuration exists.
 
 // Function to set the active weapon.
 function setWeapon(index) {
@@ -1991,7 +1994,7 @@ function updateEnemySpawn() {
 // The main animation loop.
 function animate(currentTime) {
     // Request the next animation frame.
-    animationFrameId = requestAnimationFrame(animate);
+    requestAnimationFrame(animate); // Schedule the next frame without storing the ID to avoid TDZ issues.
 
     // Do not render or update the 3D scene while assets are loading.
     if (assetsLoading) { // Check if loading is still in progress.
