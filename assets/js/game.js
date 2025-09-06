@@ -23,6 +23,8 @@ const USE_GLTF_SCENE = true; // Toggle to switch from procedural ground/obstacle
 const CITY_SCALE = 15; // Adjust this scale to make the city larger or smaller.
 // Vector used to offset the city model in world space.
 const CITY_OFFSET = new THREE.Vector3(0, 0, 0); // Adjust this offset to reposition the city.
+// Flag to track whether assets are still loading to control rendering.
+let assetsLoading = USE_GLTF_SCENE ? true : false; // Start in loading state when using the GLTF scene.
 
 // Arrays used for collision detection against the loaded GLTF scene.
 const collisionMeshes = []; // Store all mesh objects from the GLTF for raycasting.
@@ -269,6 +271,18 @@ if (USE_GLTF_SCENE) { // Only load the GLTF when the feature flag is enabled.
     // Set the base path for related model resources as recommended by the docs.
     gltfLoader.setPath('assets/models/city/'); // Ensure relative resource URIs resolve correctly.
     // Begin loading the city model from the configured base path with progress and error callbacks.
+    // Create DOM references for the loading UI.
+    const loadingEl = document.getElementById('loading'); // Get the loading container element.
+    const loadingBarEl = document.getElementById('loading-bar'); // Get the inner bar element to reflect progress.
+    // Helper to show the loading bar.
+    function showLoading() { if (loadingEl) { loadingEl.style.display = 'block'; } } // Display the loading UI when present.
+    // Helper to hide the loading bar.
+    function hideLoading() { if (loadingEl) { loadingEl.style.display = 'none'; } } // Hide the loading UI when loading completes.
+    // Helper to update the loading bar progress percentage.
+    function setLoadingProgress(pct) { if (loadingBarEl) { loadingBarEl.style.width = pct + '%'; } } // Set the current width based on percentage.
+    // Show the loading UI before starting to load assets.
+    showLoading(); // Make the loading bar visible at the start of loading.
+    // Start loading the GLTF scene.
     gltfLoader.load('scene.gltf', (gltf) => { // Load the GLTF scene asynchronously.
         // Access the root scene object from the GLTF result.
         const city = gltf.scene; // Grab the scene graph contained in the model.
@@ -339,14 +353,31 @@ if (USE_GLTF_SCENE) { // Only load the GLTF when the feature flag is enabled.
             // Log the chosen spawn position for visibility.
             console.log('Adjusted spawn near city:', yawObject.position); // Print the spawn position.
         }
+        // Update the loading bar to complete.
+        setLoadingProgress(100); // Fill the bar to indicate completion.
+        // Hide the loading UI after finishing setup.
+        hideLoading(); // Remove the loading overlay from view.
+        // Mark assets as finished loading so rendering may begin.
+        assetsLoading = false; // Clear the loading flag to enable drawing.
+        // Reveal the renderer canvas now that loading is complete.
+        if (renderer && renderer.domElement) { renderer.domElement.style.display = 'block'; } // Show the 3D canvas.
     }, (event) => { // Define a progress callback.
         // Compute the percentage of the model that has loaded, if known.
-        const percent = event.total ? (event.loaded / event.total * 100).toFixed(0) : '...'; // Compute percent loaded.
+        const percent = event.total ? Math.round(event.loaded / event.total * 100) : 50; // Compute percent or fallback to midpoint.
         // Log loading progress for debugging.
         console.log(`Loading city model: ${percent}%`); // Print progress to the console.
+        // Update the loading bar width based on progress.
+        setLoadingProgress(percent); // Reflect current progress in the UI.
     }, (error) => { // Define an error callback to catch loading issues.
         // Log the error so problems can be diagnosed.
         console.error('Failed to load city model:', error); // Print the error object to the console.
+        // Hide the loading UI if an error occurs.
+        const loadingEl2 = document.getElementById('loading'); // Reacquire the loading element in case of scope issues.
+        if (loadingEl2) { loadingEl2.style.display = 'none'; } // Hide the loading bar on error.
+        // Allow rendering to proceed even if loading failed.
+        assetsLoading = false; // Clear the flag to avoid blocking rendering permanently.
+        // Reveal the renderer canvas so the fallback scene is visible.
+        if (renderer && renderer.domElement) { renderer.domElement.style.display = 'block'; } // Show the 3D canvas despite the error.
     });
 } // End of GLTF scene loading block.
 
@@ -376,6 +407,8 @@ renderer.shadowMap.enabled = HIGH_QUALITY; // Toggle shadow rendering based on t
 if (HIGH_QUALITY) { renderer.shadowMap.type = THREE.PCFSoftShadowMap; } // Use soft shadows for better visuals.
 // Append the renderer to the document body.
 document.body.appendChild(renderer.domElement); // Insert the renderer's canvas into the DOM.
+// Hide the 3D canvas while assets are loading so only the loading bar is visible.
+renderer.domElement.style.display = assetsLoading ? 'none' : 'block'; // Toggle canvas visibility based on loading flag.
 // Log renderer and GPU information to verify hardware acceleration.
 (function logRendererInfo() { // Define an IIFE to print GPU diagnostics.
     // Print whether WebGL2 is active.
@@ -1812,6 +1845,12 @@ function updateEnemySpawn() {
 function animate(currentTime) {
     // Request the next animation frame.
     animationFrameId = requestAnimationFrame(animate);
+
+    // Do not render or update the 3D scene while assets are loading.
+    if (assetsLoading) { // Check if loading is still in progress.
+        // Skip all rendering and game logic so only the loading UI is visible.
+        return; // Exit early until assets are ready.
+    }
 
     // Calculate FPS.
     frameCount++;

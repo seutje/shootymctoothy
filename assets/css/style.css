@@ -2,6 +2,9 @@ body {
     margin: 0;
     overflow: hidden;
 }
+canvas { display: block; }
+#loading { position: fixed; left: 10%; top: 50%; width: 80%; height: 12px; background: #222; border: 1px solid #555; z-index: 9999; }
+#loading-bar { height: 100%; width: 0%; background: #4caf50; transition: width 0.2s ease; }
 
 .touch-controls {
     position: fixed;
