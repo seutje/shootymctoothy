@@ -1317,8 +1317,18 @@ function setWeapon(index) {
         if (pistolObject) { pistolObject.visible = true; } // Display the pistol model when selected.
         // Hide the placeholder pistol group when the model is shown.
         gunGroup.visible = pistolObject ? false : true; // Use placeholder only if model unavailable.
-        // Play the ready animation when switching to the pistol.
-        playPistolAction('ready', true); // Trigger the pistol ready animation.
+        // If a reload was in progress when the weapon was swapped away, resume the proper reload animation.
+        if (pistolReloading) { // Check if the pistol was mid-reload.
+            // Choose the correct reload for the current magazine state.
+            if (pistolAmmo === 0) { // Empty magazine requires the empty reload animation.
+                playPistolAction('reloadB', true); // Resume the empty reload animation.
+            } else { // Non-empty magazine uses the tactical reload animation.
+                playPistolAction('reloadA', true); // Resume the tactical reload animation.
+            }
+        } else {
+            // Play the ready animation when switching to the pistol.
+            playPistolAction('ready', true); // Trigger the pistol ready animation.
+        }
     } else if (currentWeapon === 1) {
         // Use the rocket fire rate when the rocket launcher is selected.
         playerShotInterval = rocketShotInterval;
