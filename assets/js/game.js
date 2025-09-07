@@ -44,6 +44,26 @@ const collisionGridCellSize = 10; // Define the size of each grid cell in world 
 const collisionGrid = new Map(); // Create a map to store which boxes occupy which cells.
 // Minimum thickness below which geometry is treated as pass-through.
 const THIN_OBJECT_MIN_THICKNESS = 1.5; // Increase threshold so slightly thicker objects are pass-through.
+// Prepare adapter helpers for collision that can be overridden by a module.
+let buildCollidersHelper = (root) => buildCollidersFromModel(root); // Default to local implementation.
+let convertMaterialsHelper = (root) => convertCityMaterialsLowQuality(root); // Default to local implementation.
+// Try to import collision helpers to operate on shared arrays without changing call sites.
+(async () => { // Load collision helper module asynchronously.
+    try {
+        const mod = await import('./modules/collision.js'); // Import the collision helper factory.
+        const helpers = mod.makeCollisionHelpers({ // Build helpers bound to our shared arrays and constants.
+            THREE,
+            collisionMeshes,
+            collisionBoxes,
+            collisionGrid,
+            THIN_OBJECT_MIN_THICKNESS
+        });
+        buildCollidersHelper = helpers.buildCollidersFromModel; // Override with module implementation.
+        convertMaterialsHelper = helpers.convertMaterialsLowQuality; // Override with module implementation.
+    } catch (e) {
+        console.warn('Collision helpers module not loaded, using built-in functions', e); // Keep defaults on failure.
+    }
+})();
 
 // Enemy model configuration and loading state.
 const ENEMY_MODEL_PATH = 'assets/models/monster/'; // Define the base path where the enemy model assets reside.
@@ -278,11 +298,6 @@ function mergeCityMeshesByMaterial(root) { // Define a function to merge meshes 
 
 // Load the GLTF city scene and add it to the world.
 if (USE_GLTF_SCENE) { // Only load the GLTF when the feature flag is enabled.
-    // Create a new GLTFLoader using the global THREE namespace.
-    const gltfLoader = new THREE.GLTFLoader(); // Instantiate the loader provided by the examples script.
-    // Set the base path for related model resources as recommended by the docs.
-    gltfLoader.setPath('assets/models/city/'); // Ensure relative resource URIs resolve correctly.
-    // Begin loading the city model from the configured base path with progress and error callbacks.
     // Create DOM references for the loading UI.
     const loadingEl = document.getElementById('loading'); // Get the loading container element.
     const loadingBarEl = document.getElementById('loading-bar'); // Get the inner bar element to reflect progress.
@@ -294,138 +309,81 @@ if (USE_GLTF_SCENE) { // Only load the GLTF when the feature flag is enabled.
     function setLoadingProgress(pct) { if (loadingBarEl) { loadingBarEl.style.width = pct + '%'; } } // Set the current width based on percentage.
     // Show the loading UI before starting to load assets.
     showLoading(); // Make the loading bar visible at the start of loading.
-    // Start loading the GLTF scene.
-    gltfLoader.load('scene.gltf', (gltf) => { // Load the GLTF scene asynchronously.
-        // Access the root scene object from the GLTF result.
-        const city = gltf.scene; // Grab the scene graph contained in the model.
-        // Apply a uniform scale to the city using the configured constant.
-        city.scale.setScalar(CITY_SCALE); // Scale the city uniformly on all axes.
-        // Apply a world-space offset to position the city where desired.
-        city.position.copy(CITY_OFFSET); // Move the city to the configured offset.
-        // Add the city scene to the main Three.js scene.
-        scene.add(city); // Insert the loaded city into the active scene.
-        // Update matrices before computing bounds.
-        city.updateMatrixWorld(true); // Ensure transforms are current for accurate bounds.
-        // Compute a bounding box for the model to align it with the ground plane.
-        const bboxAlign = new THREE.Box3().setFromObject(city); // Calculate bounds for alignment purposes.
-        // Compute how far the bottom of the model is from y = 0.
-        const bottomOffset = -bboxAlign.min.y; // Determine the delta needed to place the bottom at y = 0.
-        // Shift the city so its bottom sits exactly on the ground plane level.
-        city.position.y += bottomOffset; // Apply the vertical offset to align with the ground plane.
-        // Update matrices after changing the position.
-        city.updateMatrixWorld(true); // Recompute matrices to reflect the new alignment.
-        // Replace heavy materials with cheaper ones when not in high quality mode.
-        if (!HIGH_QUALITY) { convertCityMaterialsLowQuality(city); } // Downgrade city materials for better performance.
-        // Build collision data by traversing the aligned scene.
-        buildCollidersFromModel(city); // Extract meshes and bounding boxes for collision queries.
-        // Compute a bounding box to position the player safely relative to the city.
-        const bbox = new THREE.Box3().setFromObject(city); // Calculate the world-space bounds of the aligned city.
-        // Calculate the width of a single city tile along the x axis.
-        const tileWidth = bbox.max.x - bbox.min.x; // Compute the tile size horizontally.
-        // Calculate the depth of a single city tile along the z axis.
-        const tileDepth = bbox.max.z - bbox.min.z; // Compute the tile size in depth.
-        // Determine how many tiles are needed to cover the play area on x.
-        const tilesX = Math.ceil((worldWidth / 2) / Math.max(1, tileWidth)); // Compute tile count to the positive side on x.
-        // Determine how many tiles are needed to cover the play area on z.
-        const tilesZ = Math.ceil((worldDepth / 2) / Math.max(1, tileDepth)); // Compute tile count to the positive side on z.
-        // Loop over the grid positions to place city clones.
-        for (let ix = -tilesX; ix <= tilesX; ix++) { // Iterate across the x tiles from negative to positive.
-            // Iterate across the z tiles for each x tile.
-            for (let iz = -tilesZ; iz <= tilesZ; iz++) { // Iterate across the z tiles from negative to positive.
-                // Skip the origin tile where the original city is already placed.
-                if (ix === 0 && iz === 0) { // Check if this tile is the original location.
-                    // Continue to the next tile without cloning.
-                    continue; // Avoid creating a duplicate at the origin.
-                }
-                // Create a deep clone of the city scene graph for this tile.
-                const clone = city.clone(true); // Clone the entire city hierarchy including materials.
-                // Set the clone position based on the tile indices.
-                clone.position.set(city.position.x + ix * tileWidth, city.position.y, city.position.z + iz * tileDepth); // Offset the clone by tile size.
-                // Add the clone to the scene graph.
-                scene.add(clone); // Insert the cloned city tile into the scene.
-                // Update matrices so bounds and colliders are correct.
-                clone.updateMatrixWorld(true); // Ensure the clone's transforms are up to date.
-                // Do not re-convert materials for clones to avoid duplicating textures/materials.
-                // Build collision data for this clone as well.
-                buildCollidersFromModel(clone); // Extract colliders from the cloned tile.
+    // Dynamically import the scene loader and initialize the city model.
+    (async () => {
+        try {
+            const mod = await import('./modules/scene.js');
+            const onProgress = (event) => {
+                const percent = event.total ? Math.round(event.loaded / event.total * 100) : 50;
+                console.log(`Loading city model: ${percent}%`);
+                setLoadingProgress(percent);
+            };
+            const { center } = await mod.loadCity({
+                THREE,
+                scene,
+                path: 'assets/models/city/',
+                file: 'scene.gltf',
+                scale: CITY_SCALE,
+                offset: CITY_OFFSET,
+                worldWidth,
+                worldDepth,
+                highQuality: HIGH_QUALITY,
+                onProgress,
+                buildColliders: (root) => buildCollidersHelper(root),
+                convertMaterialsLowQuality: (root) => convertMaterialsHelper(root)
+            });
+            // Create a vector to store the center of the bounding box.
+            // Read the maximum y height of the model for reference (not used for spawn).
+            // Adjust the player's spawn position if the game has not started.
+            if (!gameStarted) { // Only adjust the spawn before gameplay begins.
+                // Place the player near the center of the city horizontally.
+                yawObject.position.x = center.x; // Align the player x to the model center.
+                // Place the player a few units forward to avoid clipping.
+                yawObject.position.z = center.z + 5; // Offset z to be just in front of the center.
+                // Sample the ground height at the intended spawn x,z and rest the player on the surface.
+                const spawnSurfaceY = getGroundHeight(yawObject.position.x, yawObject.position.z); // Compute terrain height under the spawn.
+                // Place the player on the ground rather than in mid-air.
+                yawObject.position.y = spawnSurfaceY + groundLevel; // Align the camera to stand on the surface.
+                // Log the chosen spawn position for visibility.
+                console.log('Adjusted spawn near city:', yawObject.position); // Print the spawn position.
             }
+            // Update the loading bar to complete.
+            setLoadingProgress(100); // Fill the bar to indicate completion.
+            // Hide the loading UI after finishing setup.
+            hideLoading(); // Remove the loading overlay from view.
+            // Mark assets as finished loading so rendering may begin.
+            assetsLoading = false; // Clear the loading flag to enable drawing.
+            // Reveal the renderer canvas now that loading is complete.
+            if (renderer && renderer.domElement) { renderer.domElement.style.display = 'block'; } // Show the 3D canvas.
+        } catch (error) {
+            console.error('Failed to load city model:', error);
+            const loadingEl2 = document.getElementById('loading');
+            if (loadingEl2) { loadingEl2.style.display = 'none'; }
+            assetsLoading = false;
+            if (renderer && renderer.domElement) { renderer.domElement.style.display = 'block'; }
         }
-        // Create a vector to store the center of the bounding box.
-        const center = bbox.getCenter(new THREE.Vector3()); // Find the center point for reference.
-        // Read the maximum y height of the model for reference (not used for spawn).
-        const maxY = bbox.max.y; // Access the top of the city in world coordinates.
-        // Adjust the player's spawn position if the game has not started.
-        if (!gameStarted) { // Only adjust the spawn before gameplay begins.
-            // Place the player near the center of the city horizontally.
-            yawObject.position.x = center.x; // Align the player x to the model center.
-            // Place the player a few units forward to avoid clipping.
-            yawObject.position.z = center.z + 5; // Offset z to be just in front of the center.
-            // Sample the ground height at the intended spawn x,z and rest the player on the surface.
-            const spawnSurfaceY = getGroundHeight(yawObject.position.x, yawObject.position.z); // Compute terrain height under the spawn.
-            // Place the player on the ground rather than in mid-air.
-            yawObject.position.y = spawnSurfaceY + groundLevel; // Align the camera to stand on the surface.
-            // Log the chosen spawn position for visibility.
-            console.log('Adjusted spawn near city:', yawObject.position); // Print the spawn position.
-        }
-        // Update the loading bar to complete.
-        setLoadingProgress(100); // Fill the bar to indicate completion.
-        // Hide the loading UI after finishing setup.
-        hideLoading(); // Remove the loading overlay from view.
-        // Mark assets as finished loading so rendering may begin.
-        assetsLoading = false; // Clear the loading flag to enable drawing.
-        // Reveal the renderer canvas now that loading is complete.
-        if (renderer && renderer.domElement) { renderer.domElement.style.display = 'block'; } // Show the 3D canvas.
-    }, (event) => { // Define a progress callback.
-        // Compute the percentage of the model that has loaded, if known.
-        const percent = event.total ? Math.round(event.loaded / event.total * 100) : 50; // Compute percent or fallback to midpoint.
-        // Log loading progress for debugging.
-        console.log(`Loading city model: ${percent}%`); // Print progress to the console.
-        // Update the loading bar width based on progress.
-        setLoadingProgress(percent); // Reflect current progress in the UI.
-    }, (error) => { // Define an error callback to catch loading issues.
-        // Log the error so problems can be diagnosed.
-        console.error('Failed to load city model:', error); // Print the error object to the console.
-        // Hide the loading UI if an error occurs.
-        const loadingEl2 = document.getElementById('loading'); // Reacquire the loading element in case of scope issues.
-        if (loadingEl2) { loadingEl2.style.display = 'none'; } // Hide the loading bar on error.
-        // Allow rendering to proceed even if loading failed.
-        assetsLoading = false; // Clear the flag to avoid blocking rendering permanently.
-        // Reveal the renderer canvas so the fallback scene is visible.
-        if (renderer && renderer.domElement) { renderer.domElement.style.display = 'block'; } // Show the 3D canvas despite the error.
-    });
+    })();
 } // End of GLTF scene loading block.
 
-// Load the enemy model used for all enemy instances.
-(function loadEnemyModel() { // Define an IIFE to start loading the enemy model immediately.
-    // Create a loader dedicated to the enemy model.
-    const loader = new THREE.GLTFLoader(); // Instantiate the GLTFLoader for enemy assets.
-    // Set the base path for resolving the enemy model resources.
-    loader.setPath(ENEMY_MODEL_PATH); // Configure the loader to read files from the monster folder.
-    // Start loading the enemy model file.
-    loader.load(ENEMY_MODEL_FILE, (gltf) => { // Begin asynchronous loading of the enemy glTF.
-        // Extract the scene graph that represents the enemy.
-        const root = gltf.scene; // Access the enemy model's root object.
-        // Apply the configured scale to the enemy model.
-        root.scale.setScalar(ENEMY_MODEL_SCALE); // Uniformly scale the enemy model.
-        // Ensure the enemy meshes interact with lights.
-        root.traverse(o => { if (o.isMesh) { o.castShadow = HIGH_QUALITY; o.receiveShadow = HIGH_QUALITY; } }); // Configure mesh shadow flags.
-        // Replace heavy materials when high quality is disabled.
-        if (!HIGH_QUALITY) { convertCityMaterialsLowQuality(root); } // Downgrade materials for performance parity.
-        // Store the loaded model as the template for future clones.
-        enemyModelTemplate = root; // Save the root for cloning per enemy.
-        // Mark the enemy model as ready.
-        enemyModelReady = true; // Indicate that enemies can now be spawned.
-        // Spawn any queued enemies that were requested before the model was available.
-        for (let i = 0; i < enemySpawnQueue; i++) { createEnemy(); } // Create the pending enemies.
-        // Reset the spawn queue after processing.
-        enemySpawnQueue = 0; // Clear the count of queued spawns.
-    }, undefined, (err) => { // Provide an error callback for troubleshooting.
-        // Log an error if the enemy model fails to load.
-        console.error('Failed to load enemy model:', err); // Print the error to the console for debugging.
-        // Fallback to allow enemies to spawn using simple boxes when the model fails.
-        enemyModelReady = false; // Keep the ready flag false to trigger box fallback.
-    });
-})(); // End of enemy model loading IIFE.
+// Initialize the enemy model using a dynamic module import to reduce coupling.
+(async () => { // Start an async IIFE to import and prepare the enemy model.
+    try { // Guard the dynamic import with error handling.
+        const mod = await import('./modules/enemies.js'); // Import the enemies helper module.
+        const res = await mod.initEnemies({ // Initialize the enemy template via the module.
+            THREE, HIGH_QUALITY, path: ENEMY_MODEL_PATH, file: ENEMY_MODEL_FILE, scale: ENEMY_MODEL_SCALE
+        }); // End of initEnemies call with configuration.
+        // Store the template returned by the module for cloning.
+        enemyModelTemplate = res.template; // Save the prepared enemy template.
+        // Mark the enemy model as ready for use.
+        enemyModelReady = true; // Set the ready flag to allow model-based enemies.
+        // Spawn any enemies that were queued before the template was available.
+        for (let i = 0; i < enemySpawnQueue; i++) { createEnemy(); } // Create pending enemies now that the model exists.
+        // Reset the spawn queue count.
+        enemySpawnQueue = 0; // Clear the queued count after processing.
+    } catch (e) { // Handle initialization errors.
+        console.error('Failed to initialize enemy module', e); // Log the error and fall back to boxes.
+    }
+})(); // End of enemy module init block.
 
 // Create a new perspective camera.
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000); // Create a perspective camera.
@@ -1226,8 +1184,44 @@ function updatePistolMixer(delta) { // Define a function to advance the pistol a
     pistolMixer.update(delta); // Step the animation by the elapsed time.
 } // End of updatePistolMixer helper.
 
-// Initialize the pistol model after constants and helpers are defined.
-loadPistolModel(); // Start loading the pistol model now that configuration exists.
+// Initialize the pistol model after constants and helpers are defined using a dynamic module import.
+(async () => { // Start an async IIFE to load the pistol as an ES module.
+    try { // Guard against loading failures.
+        const mod = await import('./modules/pistol.js'); // Dynamically import the pistol module.
+        const res = await mod.initPistol({ // Call the initializer with configuration and context.
+            THREE,
+            camera,
+            offset: PISTOL_MODEL_OFFSET,
+            scale: PISTOL_MODEL_SCALE,
+            highQuality: HIGH_QUALITY,
+            path: PISTOL_MODEL_PATH,
+            file: PISTOL_MODEL_FILE,
+            yawOffset: PISTOL_YAW_OFFSET
+        });
+        // Apply the returned pistol instance data to existing state variables.
+        pistolObject = res.object; // Store the pistol object instance.
+        pistolMixer = res.mixer; // Store the animation mixer.
+        pistolActions = res.actions; // Store the actions map for animations.
+        // Listen for animation finishes to manage ambient and reload completion.
+        pistolMixer.addEventListener('finished', () => {
+            if (currentWeapon === 0 && pistolObject && pistolObject.visible) {
+                if (pistolActiveActionName === 'reloadA' || pistolActiveActionName === 'reloadB') {
+                    pistolAmmo = PISTOL_MAG_SIZE;
+                    pistolReloading = false;
+                    playPistolAction('ambient', false);
+                    return;
+                }
+                playPistolAction('ambient', false);
+            }
+        });
+        // Hide placeholder gun and set visibility depending on selection.
+        gunGroup.visible = false; // Hide placeholder when model is available.
+        pistolObject.visible = currentWeapon === 0; // Show only when selected.
+        pistolReady = true; // Mark ready.
+    } catch (e) {
+        console.error('Failed to initialize pistol module', e); // Log module loading errors.
+    }
+})(); // End of pistol module init block.
 
 // Function to set the active weapon.
 function setWeapon(index) {
