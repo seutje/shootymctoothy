@@ -1,0 +1,403 @@
+{
+  "accessors": [
+    {
+      "bufferView": 2,
+      "componentType": 5126,
+      "count": 29314,
+      "max": [
+        1.0179557800292969,
+        1.0179557800292969,
+        1.7118655443191528
+      ],
+      "min": [
+        -1.0179558992385864,
+        -1.0179558992385864,
+        -1.4338433742523193
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 351768,
+      "componentType": 5126,
+      "count": 29314,
+      "max": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "min": [
+        -1.0,
+        -1.0,
+        -0.9998044967651367
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 1,
+      "componentType": 5126,
+      "count": 29314,
+      "max": [
+        1.0000001192092896,
+        1.000000238418579
+      ],
+      "min": [
+        -1.8626455755565985e-07,
+        0.012725938111543655
+      ],
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 0,
+      "componentType": 5125,
+      "count": 158976,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 703536,
+      "componentType": 5126,
+      "count": 3993,
+      "max": [
+        0.22711928188800812,
+        0.22711937129497528,
+        -1.3725510835647583
+      ],
+      "min": [
+        -0.2271195352077484,
+        -0.22711940109729767,
+        -1.3920767307281494
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 751452,
+      "componentType": 5126,
+      "count": 3993,
+      "max": [
+        0.9996823072433472,
+        0.9996823072433472,
+        -0.02517811767756939
+      ],
+      "min": [
+        -0.9996823072433472,
+        -0.9996823072433472,
+        -1.0
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 1,
+      "byteOffset": 234512,
+      "componentType": 5126,
+      "count": 3993,
+      "max": [
+        0.8054865002632141,
+        0.30548644065856934
+      ],
+      "min": [
+        0.6945136189460754,
+        0.19451351463794708
+      ],
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 0,
+      "byteOffset": 635904,
+      "componentType": 5125,
+      "count": 20736,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 799368,
+      "componentType": 5126,
+      "count": 6705,
+      "max": [
+        0.8781533241271973,
+        0.8781533241271973,
+        -1.3702856302261353
+      ],
+      "min": [
+        -0.8781535029411316,
+        -0.8781534433364868,
+        -1.4171960353851318
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 879828,
+      "componentType": 5126,
+      "count": 6705,
+      "max": [
+        0.9998760223388672,
+        0.999875545501709,
+        0.5012179613113403
+      ],
+      "min": [
+        -0.999875545501709,
+        -0.999875545501709,
+        -0.9999902248382568
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 1,
+      "byteOffset": 266456,
+      "componentType": 5126,
+      "count": 6705,
+      "max": [
+        0.956159770488739,
+        0.4561597406864166
+      ],
+      "min": [
+        0.5438405275344849,
+        0.04384034499526024
+      ],
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 0,
+      "byteOffset": 718848,
+      "componentType": 5125,
+      "count": 36864,
+      "type": "SCALAR"
+    }
+  ],
+  "asset": {
+    "extras": {
+      "author": "Alien7878 (https://sketchfab.com/Alien7878)",
+      "license": "CC-BY-SA-4.0 (http://creativecommons.org/licenses/by-sa/4.0/)",
+      "source": "https://sketchfab.com/3d-models/ak-47-bullet-dd44fc6bcd5a4222938678ad04dc5647",
+      "title": "AK-47 Bullet"
+    },
+    "generator": "Sketchfab-12.67.0",
+    "version": "2.0"
+  },
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteLength": 866304,
+      "name": "floatBufferViews",
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteLength": 320096,
+      "byteOffset": 866304,
+      "byteStride": 8,
+      "name": "floatBufferViews",
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 960288,
+      "byteOffset": 1186400,
+      "byteStride": 12,
+      "name": "floatBufferViews",
+      "target": 34962
+    }
+  ],
+  "buffers": [
+    {
+      "byteLength": 2146688,
+      "uri": "scene.bin"
+    }
+  ],
+  "materials": [
+    {
+      "doubleSided": true,
+      "name": "Material.001",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.3206165176906652,
+          0.05315469102924217,
+          0.0,
+          1.0
+        ],
+        "metallicFactor": 0.0,
+        "roughnessFactor": 0.6
+      }
+    },
+    {
+      "doubleSided": true,
+      "name": "Material.002",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.220258,
+          0.220258,
+          0.220258,
+          1.0
+        ],
+        "metallicFactor": 0.0,
+        "roughnessFactor": 0.6
+      }
+    },
+    {
+      "doubleSided": true,
+      "name": "Material.003",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.357551,
+          0.143551,
+          0.013505600000000003,
+          1.0
+        ],
+        "metallicFactor": 0.0,
+        "roughnessFactor": 0.6
+      }
+    }
+  ],
+  "meshes": [
+    {
+      "name": "Bullet_Material.001_0",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 1,
+            "POSITION": 0,
+            "TEXCOORD_0": 2
+          },
+          "indices": 3,
+          "material": 0,
+          "mode": 4
+        }
+      ]
+    },
+    {
+      "name": "Bullet_Material.002_0",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 5,
+            "POSITION": 4,
+            "TEXCOORD_0": 6
+          },
+          "indices": 7,
+          "material": 1,
+          "mode": 4
+        }
+      ]
+    },
+    {
+      "name": "Bullet_Material.003_0",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 9,
+            "POSITION": 8,
+            "TEXCOORD_0": 10
+          },
+          "indices": 11,
+          "material": 2,
+          "mode": 4
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "children": [
+        1
+      ],
+      "matrix": [
+        -1.0,
+        2.832769343193999e-16,
+        6.290011496532519e-32,
+        0.0,
+        0.0,
+        2.220446049250313e-16,
+        -1.0,
+        0.0,
+        -2.832769343193999e-16,
+        -1.0,
+        -2.220446049250313e-16,
+        0.0,
+        -0.00011772419384215027,
+        -27.803123474121094,
+        -6.173533567493082e-15,
+        1.0
+      ],
+      "name": "Sketchfab_model"
+    },
+    {
+      "children": [
+        2
+      ],
+      "matrix": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "name": "Bullet.fbx"
+    },
+    {
+      "children": [
+        3
+      ],
+      "name": "RootNode"
+    },
+    {
+      "children": [
+        4,
+        5,
+        6
+      ],
+      "matrix": [
+        51.975894927978516,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        51.975894927978516,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        100.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "name": "Bullet"
+    },
+    {
+      "mesh": 0,
+      "name": "Bullet_Material.001_0"
+    },
+    {
+      "mesh": 1,
+      "name": "Bullet_Material.002_0"
+    },
+    {
+      "mesh": 2,
+      "name": "Bullet_Material.003_0"
+    }
+  ],
+  "scene": 0,
+  "scenes": [
+    {
+      "name": "Sketchfab_Scene",
+      "nodes": [
+        0
+      ]
+    }
+  ]
+}

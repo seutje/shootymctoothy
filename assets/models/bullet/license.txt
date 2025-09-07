@@ -1,0 +1,11 @@
+Model Information:
+* title:	AK-47 Bullet
+* source:	https://sketchfab.com/3d-models/ak-47-bullet-dd44fc6bcd5a4222938678ad04dc5647
+* author:	Alien7878 (https://sketchfab.com/Alien7878)
+
+Model License:
+* license type:	CC-BY-SA-4.0 (http://creativecommons.org/licenses/by-sa/4.0/)
+* requirements:	Author must be credited. Modified versions must have the same license. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "AK-47 Bullet" (https://sketchfab.com/3d-models/ak-47-bullet-dd44fc6bcd5a4222938678ad04dc5647) by Alien7878 (https://sketchfab.com/Alien7878) licensed under CC-BY-SA-4.0 (http://creativecommons.org/licenses/by-sa/4.0/)

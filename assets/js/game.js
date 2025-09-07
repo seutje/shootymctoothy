@@ -405,14 +405,23 @@ renderer.setSize(window.innerWidth, window.innerHeight); // Match the renderer s
 renderer.setPixelRatio(HIGH_QUALITY ? Math.min(2, window.devicePixelRatio) : Math.min(1.25, window.devicePixelRatio)); // Cap device pixel ratio for performance.
 // Use sRGB output encoding so glTF colors look correct as per docs.
 renderer.outputEncoding = THREE.sRGBEncoding; // Enable sRGB encoding recommended for glTF rendering.
-// Enable the shadow system only when running in high quality mode.
-renderer.shadowMap.enabled = HIGH_QUALITY; // Toggle shadow rendering based on the quality mode.
-// Select an appropriate shadow filter when enabled.
-if (HIGH_QUALITY) { renderer.shadowMap.type = THREE.PCFSoftShadowMap; } // Use soft shadows for better visuals.
+// Enable shadow mapping unconditionally so shadows are always visible.
+renderer.shadowMap.enabled = true; // Turn on shadow rendering for the scene.
+// Select a soft shadow filter for better visuals when available.
+renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Use PCF soft shadows.
 // Append the renderer to the document body.
 document.body.appendChild(renderer.domElement); // Insert the renderer's canvas into the DOM.
 // Hide the 3D canvas while assets are loading so only the loading bar is visible.
 renderer.domElement.style.display = assetsLoading ? 'none' : 'block'; // Toggle canvas visibility based on loading flag.
+// Geometry used for bullet smoke puffs so we do not recreate it per puff.
+const bulletPuffGeometry = new THREE.SphereGeometry(0.03, 8, 8); // Define a small sphere geometry for smoke particles.
+// Base material settings for smoke puffs (cloned per puff to control opacity independently).
+const bulletPuffBaseMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.25, depthWrite: false }); // Create a faint white transparent material for smoke.
+// Constants controlling the appearance and lifespan of the muzzle flash light.
+const MUZZLE_FLASH_LIFESPAN = 80; // Set the life of a muzzle flash in milliseconds.
+const MUZZLE_FLASH_INTENSITY = 5; // Set the starting intensity of the flash light.
+const MUZZLE_FLASH_DISTANCE = 3.0; // Set how far the flash light reaches.
+const MUZZLE_FLASH_DECAY = 2.0; // Set the decay rate of the point light over distance.
 // Log renderer and GPU information to verify hardware acceleration.
 (function logRendererInfo() { // Define an IIFE to print GPU diagnostics.
     // Print whether WebGL2 is active.
@@ -435,11 +444,34 @@ const sunLight = new THREE.PointLight(0xffffff, 1, 1000);
 // Position the sun light.
 sunLight.position.set(110, 125, -500);
 // Allow the sun light to cast shadows.
-sunLight.castShadow = HIGH_QUALITY; // Enable light shadows only in high quality mode.
-// Configure the shadow map size when shadows are enabled.
-if (HIGH_QUALITY) { sunLight.shadow.mapSize.set(1024, 1024); } // Increase resolution for cleaner shadows.
+sunLight.castShadow = true; // Always enable shadow casting for the sun light.
+// Configure the shadow map size for cleaner shadows.
+sunLight.shadow.mapSize.set(1024, 1024); // Use a higher-resolution shadow map.
+// Apply a small bias to help reduce shadow acne on large meshes.
+sunLight.shadow.bias = -0.0005; // Slightly offset depth comparisons.
 // Add the sun light to the scene.
 scene.add(sunLight);
+
+// Add a directional "sun" for strong, crisp shadows across the scene.
+const sunDirectional = new THREE.DirectionalLight(0xffffff, 1.2); // Create a directional light to act as the sun.
+// Position the sun high in the sky and offset so shadows have direction.
+sunDirectional.position.set(250, 400, 200); // Set the light position above and to the side of the scene.
+// Enable shadow casting on the sun light.
+sunDirectional.castShadow = true; // Allow the directional light to cast shadows.
+// Increase the shadow map resolution for cleaner shadows.
+sunDirectional.shadow.mapSize.set(2048, 2048); // Use a high-resolution shadow map.
+// Configure the orthographic shadow camera to cover the entire play area.
+const shadowExtent = 600; // Define the half-size of the shadow camera frustum.
+sunDirectional.shadow.camera.left = -shadowExtent; // Set the left plane of the shadow camera.
+sunDirectional.shadow.camera.right = shadowExtent; // Set the right plane of the shadow camera.
+sunDirectional.shadow.camera.top = shadowExtent; // Set the top plane of the shadow camera.
+sunDirectional.shadow.camera.bottom = -shadowExtent; // Set the bottom plane of the shadow camera.
+sunDirectional.shadow.camera.near = 1; // Set the near plane for the shadow camera.
+sunDirectional.shadow.camera.far = 1500; // Set the far plane for the shadow camera.
+// Apply a small bias to reduce shadow acne.
+sunDirectional.shadow.bias = -0.0005; // Offset depth comparisons slightly.
+// Add the sun directional light to the scene (and its target by default at 0,0,0).
+scene.add(sunDirectional); // Insert the directional sun into the scene.
 
 // Create a plane geometry for the fallback ground.
 const groundGeometry = new THREE.PlaneGeometry(500, 500); // Define a large plane for a simple ground.
@@ -875,6 +907,10 @@ const explosions = [];
 const explosionLights = [];
 // Create an array to store lightning beam meshes.
 const lightningBeams = [];
+// Create an array to store smoke puffs spawned by pistol bullets.
+const bulletSmokePuffs = []; // Maintain a list of active smoke particles for bullet trails.
+// Create an array to store brief muzzle flash sprites when the pistol fires.
+const muzzleFlashes = []; // Track active muzzle flash effects for short-lived rendering.
 
 // Function to reset enemy shot timers for all enemies.
 function resetEnemyShotTimers() {
@@ -1140,6 +1176,13 @@ let pistolMixer = null; // Store the AnimationMixer for controlling pistol anima
 let pistolActions = {}; // Store a map from action name to AnimationAction for easy control.
 let pistolActiveActionName = null; // Track which pistol action is currently active.
 let pistolReady = false; // Track whether the pistol model has finished loading and is ready.
+// Configuration values for the pistol bullet model.
+const BULLET_MODEL_PATH = 'assets/models/bullet/'; // Define the base path for the bullet model resources.
+const BULLET_MODEL_FILE = 'scene.gltf'; // Define the filename for the bullet model file.
+const BULLET_MODEL_SCALE = 0.0005; // Define a uniform scale for the bullet model template.
+// References to hold the loaded bullet template state.
+let bulletModelTemplate = null; // Store the loaded bullet model template for cloning.
+let bulletModelReady = false; // Track whether the bullet model has finished loading.
 // Define the pistol magazine capacity in bullets.
 const PISTOL_MAG_SIZE = 20; // Set the pistol magazine size to twenty rounds.
 // Track how many bullets remain in the current magazine.
@@ -1165,6 +1208,27 @@ function playPistolAction(name, loopOnce = true) { // Define a function to play 
     // Remember which action is currently active for idle handling.
     pistolActiveActionName = name; // Store the active action name.
 } // End of playPistolAction helper.
+
+// Helper to spawn a brief muzzle flash sprite near the pistol muzzle.
+function spawnPistolMuzzleFlash() { // Define a function to create a short-lived muzzle flash light.
+    // Create a point light with warm color and configured reach.
+    const light = new THREE.PointLight(0xffeeaa, MUZZLE_FLASH_INTENSITY, MUZZLE_FLASH_DISTANCE, MUZZLE_FLASH_DECAY); // Instantiate the flash light.
+    // Compute the world position to place the light near the muzzle.
+    const pos = new THREE.Vector3(); // Allocate a vector to hold the position.
+    if (pistolObject) { pistolObject.getWorldPosition(pos); } else { camera.getWorldPosition(pos); } // Get a suitable origin.
+    // Offset a bit forward from the camera/pistol so the flash lights the scene.
+    const dir = new THREE.Vector3(); // Allocate a vector for forward direction.
+    camera.getWorldDirection(dir); // Get world forward.
+    pos.add(dir.multiplyScalar(0.08)); // Offset slightly in front.
+    // Apply the position to the light.
+    light.position.copy(pos); // Place the light at the computed position.
+    // Record the spawn time for fading and removal.
+    light.spawnTime = Date.now(); // Save the creation time.
+    // Add the flash light to the scene.
+    scene.add(light); // Insert the light into the scene.
+    // Track the light for updates.
+    muzzleFlashes.push(light); // Store the light in the active flashes array.
+} // End of spawnPistolMuzzleFlash helper.
 
 // Helper to begin a pistol reload sequence.
 function startPistolReload() { // Define a function to initiate the pistol reload.
@@ -1222,6 +1286,21 @@ function updatePistolMixer(delta) { // Define a function to advance the pistol a
         console.error('Failed to initialize pistol module', e); // Log module loading errors.
     }
 })(); // End of pistol module init block.
+
+// Initialize the pistol bullet model using a dynamic module import.
+(async () => { // Start an async IIFE to load the bullet template.
+    try { // Guard the dynamic import with a try/catch.
+        const mod = await import('./modules/bullet.js'); // Dynamically import the bullet initializer module.
+        const res = await mod.initBullet({ // Call the initializer with configuration parameters.
+            THREE, path: BULLET_MODEL_PATH, file: BULLET_MODEL_FILE, scale: BULLET_MODEL_SCALE, highQuality: HIGH_QUALITY
+        }); // Await the result containing the prepared template.
+        bulletModelTemplate = res.template; // Store the loaded bullet template for cloning.
+        bulletModelReady = true; // Mark the bullet template as ready for use.
+    } catch (e) { // Handle any loading errors.
+        console.error('Failed to initialize bullet model', e); // Log the error to the console.
+        bulletModelReady = false; // Leave the ready flag false to keep fallback geometry.
+    } // End of error handling.
+})(); // End of bullet module init block.
 
 // Function to set the active weapon.
 function setWeapon(index) {
@@ -1508,6 +1587,8 @@ function onMouseDown(event) {
             createProjectile(); // Spawn the pistol bullet now that we fired.
             // Decrease the pistol ammunition by one.
             pistolAmmo -= 1; // Deduct a round from the magazine.
+            // Spawn a brief muzzle flash near the pistol muzzle.
+            spawnPistolMuzzleFlash(); // Trigger the muzzle flash effect for this shot.
         } else { // Handle non-pistol weapons.
             // Create a projectile immediately for other weapons.
             createProjectile(); // Spawn the projectile for the selected weapon.
@@ -1698,28 +1779,46 @@ function createProjectile() {
         // Add the beam to the lightning beams array.
         lightningBeams.push(beam);
     } else {
-        // Create a small box geometry for the bullet.
-        const projectileGeometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
-        // Create a yellow material for the bullet.
-        const projectileMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
-        // Create a mesh for the bullet projectile.
-        const projectile = new THREE.Mesh(projectileGeometry, projectileMaterial);
-        // Set the bullet position to the camera position.
-        camera.getWorldPosition(projectile.position);
-        // Store the bullet spawn position for distance checks.
-        projectile.spawnPosition = projectile.position.clone();
-        // Get the camera direction.
-        const projectileDirection = new THREE.Vector3();
-        // Get the forward direction from the camera.
-        camera.getWorldDirection(projectileDirection);
-        // Set the bullet velocity.
-        projectile.velocity = projectileDirection.multiplyScalar(1);
-        // Mark this projectile as a bullet.
-        projectile.isRocket = false;
-        // Add the bullet to the scene.
-        scene.add(projectile);
-        // Add the bullet to the projectiles array.
-        projectiles.push(projectile);
+        // Create a pistol bullet projectile using the loaded model template or a simple fallback.
+        let projectile; // Declare a variable to hold the projectile object.
+        // Check if the bullet model is ready to be cloned.
+        if (bulletModelReady && bulletModelTemplate) { // Use the glTF bullet when available.
+            // Clone the bullet template for this projectile instance.
+            projectile = bulletModelTemplate.clone(true); // Create a deep clone of the model.
+        } else { // Fallback to a basic small box when the model is not ready.
+            // Create a small box geometry for the bullet fallback.
+            const projectileGeometry = new THREE.BoxGeometry(0.1, 0.1, 0.1); // Define a tiny cube as a bullet.
+            // Create a yellow material for the fallback bullet.
+            const projectileMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 }); // Use a simple unlit material.
+            // Create a mesh for the bullet fallback projectile.
+            projectile = new THREE.Mesh(projectileGeometry, projectileMaterial); // Instantiate the fallback mesh.
+        }
+        // Set the bullet position to the camera world position so it spawns at the muzzle.
+        camera.getWorldPosition(projectile.position); // Copy the camera position into the projectile.
+        // Store the bullet spawn position for distance checks and lifetime.
+        projectile.spawnPosition = projectile.position.clone(); // Save the initial position.
+        // Compute the bullet travel direction from the camera forward vector.
+        const projectileDirection = new THREE.Vector3(); // Allocate a vector for the direction.
+        // Read the world forward direction from the camera.
+        camera.getWorldDirection(projectileDirection); // Fill the direction vector with the camera forward.
+        // Normalize the direction so orientation and speed are correct.
+        projectileDirection.normalize(); // Ensure the direction has unit length.
+        // Orient the bullet so its local up axis points along the travel direction.
+        const up = new THREE.Vector3(0, 1, 0); // Define the model's "up" axis.
+        // Create a quaternion that rotates up into the projectile direction.
+        const q = new THREE.Quaternion().setFromUnitVectors(up, projectileDirection); // Build the rotation quaternion.
+        // Apply the orientation quaternion to the projectile.
+        projectile.quaternion.copy(q); // Rotate the bullet to face its travel direction.
+        // Set the bullet velocity by scaling the normalized direction.
+        projectile.velocity = projectileDirection.clone().multiplyScalar(1); // Assign the constant bullet speed.
+        // Mark this projectile explicitly as not a rocket.
+        projectile.isRocket = false; // Identify the projectile type for collision logic.
+        // Track the last time a smoke puff was spawned for this projectile.
+        projectile.lastTrailTime = Date.now(); // Record when the previous puff was created.
+        // Add the bullet projectile to the scene graph.
+        scene.add(projectile); // Insert the projectile into the world.
+        // Track the projectile in the shared array for updates.
+        projectiles.push(projectile); // Add to the active projectiles list.
     }
     // Play the shooting sound effect only after player interaction.
     if (!autoplay) {
@@ -2112,6 +2211,29 @@ function animate(currentTime) {
         }
     }
 
+    // Update and fade muzzle flashes quickly so they disappear after a brief moment.
+    for (let i = muzzleFlashes.length - 1; i >= 0; i--) { // Iterate backwards to safely remove elements.
+        // Access the current muzzle flash light.
+        const light = muzzleFlashes[i]; // Get the flash light to update.
+        // Calculate the age of the flash in milliseconds.
+        const age = Date.now() - light.spawnTime; // Compute elapsed time since creation.
+        // Remove the light if it has outlived its lifespan.
+        if (age > MUZZLE_FLASH_LIFESPAN) { // Check if the light should be removed.
+            // Remove the light from the scene to stop rendering it.
+            scene.remove(light); // Detach the light from the scene graph.
+            // Remove this light from the active array.
+            muzzleFlashes.splice(i, 1); // Delete the light from the tracking list.
+            // Continue to the next flash after removal.
+            continue; // Proceed without further updates for this light.
+        }
+        // Compute a normalized value for the flash progression.
+        const t = age / MUZZLE_FLASH_LIFESPAN; // Map age into a 0..1 range.
+        // Reduce intensity over time for a fade-out effect on the light.
+        light.intensity = MUZZLE_FLASH_INTENSITY * (1 - t); // Fade the flash light intensity toward zero.
+        // Optionally narrow the light distance slightly as it fades.
+        light.distance = MUZZLE_FLASH_DISTANCE * (1 - 0.3 * t); // Slightly reduce effective distance.
+    }
+
     // If the game is paused, do not update game logic.
     if (gamePaused) {
         // Rotate the camera slowly during autoplay.
@@ -2161,6 +2283,8 @@ function animate(currentTime) {
                 createProjectile(); // Spawn the pistol bullet mesh into the scene.
                 // Decrease the pistol ammo count by one.
                 pistolAmmo -= 1; // Deduct a round from the pistol magazine.
+                // Spawn a brief muzzle flash near the pistol muzzle.
+                spawnPistolMuzzleFlash(); // Trigger the muzzle flash effect for this auto-fired shot.
                 // Record the time of this shot to enforce the fire rate.
                 lastPlayerShotTime = currentTime; // Update the last shot timestamp.
             }
@@ -2313,12 +2437,63 @@ function animate(currentTime) {
     // Apply the gun tilt rotations for weaving effect.
     gunGroup.rotation.set(gunTiltX, gunTiltY, 0);
 
+    // Update and fade out smoke puffs spawned by pistol bullets.
+    for (let i = bulletSmokePuffs.length - 1; i >= 0; i--) { // Iterate backwards so we can remove elements.
+        // Get the current smoke puff from the array.
+        const puff = bulletSmokePuffs[i]; // Access the smoke puff to update.
+        // Compute the age of the puff in milliseconds.
+        const age = Date.now() - puff.spawnTime; // Calculate how long the puff has existed.
+        // Define the total lifespan of a puff.
+        const lifespan = 400; // Set the smoke puff lifetime to four hundred milliseconds.
+        // Remove the puff if it has exceeded its lifespan.
+        if (age > lifespan) { // Check if this puff should be destroyed.
+            // Remove the puff mesh from the scene graph.
+            scene.remove(puff); // Detach the puff from the scene.
+            // Remove the puff entry from the array of active puffs.
+            bulletSmokePuffs.splice(i, 1); // Delete the puff from the tracking list.
+            // Continue to the next puff after removal.
+            continue; // Proceed to update the next puff.
+        }
+        // Compute the normalized time between zero and one.
+        const t = age / lifespan; // Calculate the fraction of lifetime elapsed.
+        // Gradually increase the scale so the puff expands like smoke.
+        const s = 1 + t * 3; // Compute a scale factor that grows over time.
+        // Apply the new scale to the puff.
+        puff.scale.set(s, s, s); // Set the puff scale uniformly based on elapsed time.
+        // Make the puff gently rise to simulate smoke buoyancy.
+        puff.position.y += 0.003; // Raise the puff a small amount each frame.
+        // Fade the puff opacity toward zero over its lifespan.
+        puff.material.opacity = 0.25 * (1 - t); // Adjust the material opacity based on age.
+    }
+
     // Update the position of each projectile.
     for (let i = projectiles.length - 1; i >= 0; i--) {
         // Get the current projectile.
         const projectile = projectiles[i];
         // Update the projectile's position based on its velocity.
         projectile.position.add(projectile.velocity);
+        // Spawn a smoke puff periodically for pistol bullets to create a trail.
+        if (!projectile.isRocket && bulletPuffGeometry && bulletPuffBaseMaterial) { // Ensure this is a pistol bullet and resources exist.
+            // Check if enough time has elapsed since the last puff.
+            if (Date.now() - (projectile.lastTrailTime || 0) > 30) { // Throttle puff spawning to every 30 milliseconds.
+                // Create a unique material so we can fade this puff independently.
+                const mat = bulletPuffBaseMaterial.clone(); // Clone the base smoke material for per-puff opacity.
+                // Create a mesh for the smoke puff using the shared geometry.
+                const puff = new THREE.Mesh(bulletPuffGeometry, mat); // Instantiate a smoke puff mesh.
+                // Place the puff at the current bullet position.
+                puff.position.copy(projectile.position); // Set the puff position to the bullet location.
+                // Record the spawn time for lifespan and fading.
+                puff.spawnTime = Date.now(); // Save when this smoke puff was created.
+                // Initialize the puff scale to a small value.
+                puff.scale.set(1, 1, 1); // Start with a unit scale; the geometry itself is already small.
+                // Add the puff to the scene for rendering.
+                scene.add(puff); // Insert the smoke puff into the scene.
+                // Track the puff so it can be updated and removed later.
+                bulletSmokePuffs.push(puff); // Store the puff in the list of active smoke particles.
+                // Update the last puff time on the projectile to throttle spawning.
+                projectile.lastTrailTime = Date.now(); // Store the time of this puff creation.
+            }
+        }
         // Remove the projectile if it travels too far from its spawn position.
         if (projectile.position.distanceTo(projectile.spawnPosition) > 100) {
             // Stop the hum sound for this projectile.
@@ -2819,6 +2994,20 @@ function resetGameState() {
     });
     // Clear the lightning beams array.
     lightningBeams.length = 0;
+    // Remove any lingering bullet smoke puffs from the scene.
+    bulletSmokePuffs.forEach(puff => {
+        // Remove the puff mesh from the scene graph.
+        scene.remove(puff);
+    });
+    // Clear the bullet smoke puffs array.
+    bulletSmokePuffs.length = 0;
+    // Remove any leftover muzzle flashes from the scene.
+    muzzleFlashes.forEach(flash => {
+        // Remove the flash sprite from the scene graph.
+        scene.remove(flash);
+    });
+    // Clear the muzzle flashes array.
+    muzzleFlashes.length = 0;
     // Reset to the basic gun weapon.
     setWeapon(0);
     // Reset the game start time for spawn scaling.
