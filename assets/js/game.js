@@ -65,6 +65,11 @@ let convertMaterialsHelper = (root) => convertCityMaterialsLowQuality(root); // 
     }
 })();
 
+// Forward-declare model preload promises so they can be referenced before assignment.
+let pistolPreloadPromise = Promise.resolve(); // Placeholder promise for pistol model preload.
+let bulletPreloadPromise = Promise.resolve(); // Placeholder promise for bullet model preload.
+let enemyPreloadPromise = Promise.resolve(); // Placeholder promise for enemy model preload.
+
 // Enemy model configuration and loading state.
 const ENEMY_MODEL_PATH = 'assets/models/monster/'; // Define the base path where the enemy model assets reside.
 const ENEMY_MODEL_FILE = 'scene.gltf'; // Define the filename of the enemy model to load.
@@ -311,7 +316,7 @@ if (USE_GLTF_SCENE) { // Only load the GLTF when the feature flag is enabled.
     // Show the loading UI before starting to load assets.
     showLoading(); // Make the loading bar visible at the start of loading.
     // Dynamically import the scene loader and initialize the city model.
-    (async () => {
+    const cityLoadPromise = (async () => {
         try {
             const mod = await import('./modules/scene.js');
             const onProgress = (event) => {
@@ -348,26 +353,35 @@ if (USE_GLTF_SCENE) { // Only load the GLTF when the feature flag is enabled.
                 // Log the chosen spawn position for visibility.
                 console.log('Adjusted spawn near city:', yawObject.position); // Print the spawn position.
             }
-            // Update the loading bar to complete.
-            setLoadingProgress(100); // Fill the bar to indicate completion.
-            // Hide the loading UI after finishing setup.
-            hideLoading(); // Remove the loading overlay from view.
-            // Mark assets as finished loading so rendering may begin.
-            assetsLoading = false; // Clear the loading flag to enable drawing.
-            // Reveal the renderer canvas now that loading is complete.
-            if (renderer && renderer.domElement) { renderer.domElement.style.display = 'block'; } // Show the 3D canvas.
+            // City load finished; overall preloader will finalize UI when all models are ready.
         } catch (error) {
             console.error('Failed to load city model:', error);
+            // Let the overall preloader finalize the UI even on error.
+        }
+    })();
+    // After starting all model preloads, wait for them to complete before showing the scene.
+    (async () => {
+        try {
+            const promises = [cityLoadPromise, pistolPreloadPromise, bulletPreloadPromise, enemyPreloadPromise].filter(Boolean);
+            await Promise.all(promises);
+        } finally {
             const loadingEl2 = document.getElementById('loading');
-            if (loadingEl2) { loadingEl2.style.display = 'none'; }
+            const loadingBarEl2 = document.getElementById('loading-bar');
+            if (loadingBarEl2) loadingBarEl2.style.width = '100%';
+            if (loadingEl2) loadingEl2.style.display = 'none';
             assetsLoading = false;
-            if (renderer && renderer.domElement) { renderer.domElement.style.display = 'block'; }
+            // Reveal the canvas as soon as it exists without touching the renderer identifier (avoid TDZ).
+            (function showCanvasWhenReady() {
+                const canvasEl = document.querySelector('canvas');
+                if (canvasEl) { canvasEl.style.display = 'block'; }
+                else { setTimeout(showCanvasWhenReady, 0); }
+            })();
         }
     })();
 } // End of GLTF scene loading block.
 
 // Initialize the enemy model using a dynamic module import to reduce coupling.
-(async () => { // Start an async IIFE to import and prepare the enemy model.
+enemyPreloadPromise = (async () => { // Start an async IIFE to import and prepare the enemy model.
     try { // Guard the dynamic import with error handling.
         const mod = await import('./modules/enemies.js'); // Import the enemies helper module.
         const res = await mod.initEnemies({ // Initialize the enemy template via the module.
@@ -416,6 +430,8 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Use PCF soft shadows.
 document.body.appendChild(renderer.domElement); // Insert the renderer's canvas into the DOM.
 // Hide the 3D canvas while assets are loading so only the loading bar is visible.
 renderer.domElement.style.display = assetsLoading ? 'none' : 'block'; // Toggle canvas visibility based on loading flag.
+// If assets have already finished preloading by this point, ensure the canvas is visible.
+if (!assetsLoading) { renderer.domElement.style.display = 'block'; } // Reveal the canvas when preloading finished earlier.
 // Geometry used for bullet smoke puffs so we do not recreate it per puff.
 const bulletPuffGeometry = new THREE.SphereGeometry(0.03, 8, 8); // Define a small sphere geometry for smoke particles.
 // Base material settings for smoke puffs (cloned per puff to control opacity independently).
@@ -1252,7 +1268,7 @@ function updatePistolMixer(delta) { // Define a function to advance the pistol a
 } // End of updatePistolMixer helper.
 
 // Initialize the pistol model after constants and helpers are defined using a dynamic module import.
-(async () => { // Start an async IIFE to load the pistol as an ES module.
+pistolPreloadPromise = (async () => { // Start an async IIFE to load the pistol as an ES module.
     try { // Guard against loading failures.
         const mod = await import('./modules/pistol.js'); // Dynamically import the pistol module.
         const res = await mod.initPistol({ // Call the initializer with configuration and context.
@@ -1291,7 +1307,7 @@ function updatePistolMixer(delta) { // Define a function to advance the pistol a
 })(); // End of pistol module init block.
 
 // Initialize the pistol bullet model using a dynamic module import.
-(async () => { // Start an async IIFE to load the bullet template.
+bulletPreloadPromise = (async () => { // Start an async IIFE to load the bullet template.
     try { // Guard the dynamic import with a try/catch.
         const mod = await import('./modules/bullet.js'); // Dynamically import the bullet initializer module.
         const res = await mod.initBullet({ // Call the initializer with configuration parameters.
