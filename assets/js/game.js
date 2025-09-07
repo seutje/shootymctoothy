@@ -72,6 +72,7 @@ const ENEMY_MODEL_SCALE = 1; // Define a uniform scale factor to apply to the en
 let enemyModelTemplate = null; // Store the loaded enemy model that will be cloned for each enemy.
 let enemyModelReady = false; // Track whether the enemy model has finished loading.
 let enemySpawnQueue = 0; // Count how many enemies should be spawned once the model is ready.
+let enemySpawnMultiplier = 1; // Multiplier used to increase enemy spawn counts.
 
 // Helper to compute a grid cell index from a coordinate.
 function gridIndex(v) { // Define a function that converts a coordinate to a grid index.
@@ -376,6 +377,8 @@ if (USE_GLTF_SCENE) { // Only load the GLTF when the feature flag is enabled.
         enemyModelTemplate = res.template; // Save the prepared enemy template.
         // Mark the enemy model as ready for use.
         enemyModelReady = true; // Set the ready flag to allow model-based enemies.
+        // Apply a spawn multiplier from the module if provided.
+        if (typeof mod.ENEMY_SPAWN_MULTIPLIER === 'number') { enemySpawnMultiplier = mod.ENEMY_SPAWN_MULTIPLIER; }
         // Spawn any enemies that were queued before the template was available.
         for (let i = 0; i < enemySpawnQueue; i++) { createEnemy(); } // Create pending enemies now that the model exists.
         // Reset the spawn queue count.
@@ -987,7 +990,7 @@ let health = 100;
 // Track how many enemies have been killed.
 let killCount = 0;
 // Define the starting number of enemies.
-const initialEnemyCount = 10;
+const initialEnemyCount = 20;
 // Record the time when the game begins.
 let gameStartTime = Date.now();
 // Store the last time enemy spawns were checked.
@@ -2026,11 +2029,14 @@ function findEnemySpawnPosition() {
     // Track how many attempts have been made.
     let attempts = 0;
     // Try multiple times to find a valid location.
-    while (attempts < 100) {
-        // Create a random x position within the play area.
-        const x = (Math.random() - 0.5) * 50;
-        // Create a random z position within the play area.
-        const z = (Math.random() - 0.5) * 50;
+    while (attempts < 300) {
+        // Calculate half extents of the world minus a small margin from the edges.
+        const halfW = worldWidth / 2 - 2; // Leave a small margin on the x axis.
+        const halfD = worldDepth / 2 - 2; // Leave a small margin on the z axis.
+        // Create a random x position within the world bounds.
+        const x = (Math.random() * 2 - 1) * halfW; // Uniformly distribute across the map width.
+        // Create a random z position within the world bounds.
+        const z = (Math.random() * 2 - 1) * halfD; // Uniformly distribute across the map depth.
         // Create a vector for the potential spawn position.
         const position = new THREE.Vector3(x, 1, z); // Initialize with a default y value.
         // Adjust the spawn y to rest on the surface of the scene.
@@ -2119,7 +2125,7 @@ function createEnemy() {
 }
 
 // Create the initial number of enemies.
-for (let i = 0; i < initialEnemyCount; i++) {
+for (let i = 0; i < initialEnemyCount * enemySpawnMultiplier; i++) {
     // Create an enemy.
     createEnemy();
 }
@@ -2140,7 +2146,7 @@ function updateEnemySpawn() {
         // Calculate the elapsed time in minutes.
         const minutesElapsed = (now - gameStartTime) / 60000;
         // Determine how many enemies should exist now.
-        const targetCount = Math.floor(initialEnemyCount * Math.pow(2, minutesElapsed));
+        const targetCount = Math.floor(initialEnemyCount * enemySpawnMultiplier * Math.pow(2, minutesElapsed));
         // Calculate how many new enemies must be created.
         const needed = targetCount - enemies.length;
         // Spawn additional enemies when needed.

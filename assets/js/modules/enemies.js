@@ -19,3 +19,6 @@ export async function initEnemies({ THREE, HIGH_QUALITY, path, file, scale }) {
   return { template: root }; // Provide the prepared root to the caller.
 }
 
+// Export a spawn multiplier to control how many enemies are spawned.
+export const ENEMY_SPAWN_MULTIPLIER = 2; // Double the number of enemies spawned.
+
