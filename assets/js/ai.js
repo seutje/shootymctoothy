@@ -11,6 +11,11 @@ const projectileSpeed = 1;
 // Store the smoothing factor for AI mouse movement.
 const rotationSmoothing = 0.1;
 
+// Milliseconds to wait between each AI update cycle.
+const AI_THROTTLE_MS = 50; // Define how frequently the autoplay AI may run.
+// Track the timestamp of the last AI update.
+let lastAIUpdate = 0; // Record when the AI logic last executed.
+
 // Milliseconds to wait between expensive line of sight checks.
 const LOS_THROTTLE_MS = 250; // Define how frequently LOS raycasts may run for a given target.
 // Helper to throttle line of sight tests and reuse recent results.
@@ -122,6 +127,10 @@ function getOpenDirections() {
 
 // Function to update the autoplay AI each frame.
 function updateAutoplayAI(currentTime) {
+    // Skip the AI update when the throttle interval has not elapsed.
+    if (currentTime - lastAIUpdate < AI_THROTTLE_MS) { return; } // Enforce throttling based on time since last update.
+    // Record the current time as the last update timestamp.
+    lastAIUpdate = currentTime; // Update the last AI execution time.
     // Look for a health pack when health is below one hundred.
     const pack = health < 100 ? findVisibleHealthPack() : null;
     // Determine which directions are free of obstacles.
