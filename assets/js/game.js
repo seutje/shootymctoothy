@@ -30,6 +30,15 @@ const worldWidth = 500; // Define the approximate world width for bounds.
 // Store the world depth for obstacle placement calculations and tiling.
 const worldDepth = 500; // Define the approximate world depth for bounds.
 
+// Track the maximum distance at which objects remain visible.
+let drawDistance = 1000; // Initialize the draw distance used for rendering and fog.
+// Define the minimum draw distance allowed to maintain basic visibility.
+const MIN_DRAW_DISTANCE = 200; // Prevent the draw distance from shrinking too far.
+// Define the step amount to reduce the draw distance when performance is low.
+const DRAW_DISTANCE_STEP = 100; // Lower the view distance in this increment when necessary.
+// Apply fog to the scene to create a draw distance limit.
+scene.fog = new THREE.Fog(0x000000, 0.1, drawDistance); // Use black fog to hide distant objects.
+
 // Arrays used for collision detection against the loaded GLTF scene.
 const collisionMeshes = []; // Store all mesh objects from the GLTF for raycasting.
 const collisionBoxes = []; // Store world-space axis-aligned bounding boxes for broad-phase checks.
@@ -403,7 +412,7 @@ enemyPreloadPromise = (async () => { // Start an async IIFE to import and prepar
 })(); // End of enemy module init block.
 
 // Create a new perspective camera.
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000); // Create a perspective camera.
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, drawDistance); // Create a perspective camera with adjustable draw distance.
 // Attach the audio listener to the camera.
 attachAudioListener(camera); // Hook the audio system to the active camera.
 // Create a canvas element that will host the WebGL context.
@@ -1060,6 +1069,8 @@ setVolume(volumeLevel);
 let lastFrameTime = 0;
 let frameCount = 0;
 let fps = 0;
+// Track how many consecutive seconds the FPS stays below target.
+let lowFpsSeconds = 0; // Count seconds where performance is under the desired FPS.
 // Variable to store the last time the UI was updated.
 let lastUIUpdate = -200;
 
@@ -2226,6 +2237,18 @@ function animate(currentTime) {
                 // Apply a higher pixel ratio to improve clarity.
                 renderer.setPixelRatio(Math.min(maxPR, currentPR + step)); // Raise the pixel ratio within bounds.
             }
+        }
+        // Adjust draw distance based on sustained low FPS.
+        if (fps < 50) { // Check if the current FPS is below the target threshold.
+            lowFpsSeconds++; // Increase the counter tracking low FPS duration.
+            if (lowFpsSeconds >= 5 && drawDistance > MIN_DRAW_DISTANCE) { // Ensure five seconds have passed and limits allow reduction.
+                drawDistance = Math.max(MIN_DRAW_DISTANCE, drawDistance - DRAW_DISTANCE_STEP); // Reduce draw distance while respecting the minimum.
+                camera.far = drawDistance; // Update the camera's far plane to the new draw distance.
+                scene.fog.far = drawDistance; // Update the fog distance to match the camera range.
+                lowFpsSeconds = 0; // Reset the low FPS counter after adjusting the draw distance.
+            }
+        } else { // FPS is at or above the target.
+            lowFpsSeconds = 0; // Reset the counter when performance is sufficient.
         }
     }
 
