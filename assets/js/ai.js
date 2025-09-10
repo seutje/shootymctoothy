@@ -18,6 +18,8 @@ let lastAIUpdate = 0; // Record when the AI logic last executed.
 
 // Milliseconds to wait between expensive line of sight checks.
 const LOS_THROTTLE_MS = 250; // Define how frequently LOS raycasts may run for a given target.
+// Maximum distance to consider for line of sight checks.
+const SIGHT_RANGE = 50; // Limit vision calculations to nearby targets.
 // Helper to throttle line of sight tests and reuse recent results.
 function throttledHasLineOfSight(from, to, entity) { // Define a function that caches LOS results briefly.
     // Use the current wall clock time for throttling decisions.
@@ -59,16 +61,16 @@ function findVisibleHealthPack() {
     let minDist = Infinity;
     // Iterate over each health pack.
     healthPacks.forEach(pack => {
-        // Check if the pack is visible to the player using throttled line of sight.
-        if (throttledHasLineOfSight(yawObject.position, pack.position)) {
-            // Calculate the distance to this pack.
-            const dist = yawObject.position.distanceTo(pack.position);
+        // Calculate the distance to this pack.
+        const dist = yawObject.position.distanceTo(pack.position); // Measure distance to the pack.
+        // Only test line of sight for nearby packs.
+        if (dist < SIGHT_RANGE && throttledHasLineOfSight(yawObject.position, pack.position)) { // Skip far packs.
             // Update the closest pack if this one is nearer.
-            if (dist < minDist) {
+            if (dist < minDist) { // Compare distance against current minimum.
                 // Set the minimum distance to this pack's distance.
-                minDist = dist;
+                minDist = dist; // Record the new minimum distance.
                 // Store this pack as the closest.
-                closest = pack;
+                closest = pack; // Remember this pack as the best candidate.
             }
         }
     });
@@ -215,7 +217,7 @@ function updateAutoplayAI(currentTime) {
             fallback = enemy;
         }
         // Check if the enemy is visible without obstacles using throttled checks.
-        if (throttledHasLineOfSight(yawObject.position, enemy.position)) {
+        if (dist < SIGHT_RANGE && throttledHasLineOfSight(yawObject.position, enemy.position)) { // Skip distant enemies.
             // Check if this enemy is closer than the current target.
             if (dist < minDist) {
                 // Set the minimum distance to this enemy's distance.
@@ -259,14 +261,14 @@ function updateAutoplayAI(currentTime) {
         // Clamp the camera pitch to prevent flipping.
         camera.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, camera.rotation.x));
         // Fire a shot periodically when there is a clear path.
-        if (currentTime > aiShootTime) {
-            // Check if the player can see the predicted position without obstacles using the last enemy LOS result when recent.
-            if (throttledHasLineOfSight(yawObject.position, predicted, target)) {
+        if (currentTime > aiShootTime) { // Check if it is time to shoot again.
+            // Check if the target is close and visible to the predicted position.
+            if (distance < SIGHT_RANGE && throttledHasLineOfSight(yawObject.position, predicted, target)) { // Avoid far raycasts.
                 // Create a projectile towards the target.
-                createProjectile();
+                createProjectile(); // Launch a shot when the path is clear.
             }
             // Schedule the next shot after half a second.
-            aiShootTime = currentTime + 500;
+            aiShootTime = currentTime + 500; // Record time for the next shot.
         }
     }
     // Randomly jump if on the ground with higher frequency.
